@@ -28,8 +28,14 @@ use walkdir::WalkDir;
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
-/// A single matched line inside a file: `(1-based line number, line text)`.
-pub type LineMatch = (usize, String);
+/// A single line reported inside a content match:
+/// `(1-based line number, line text, is_match)`.
+///
+/// `is_match` is `true` for the line that actually contains the pattern,
+/// and `false` for surrounding context lines pulled in via
+/// [`SearchOptions::context_before`] / [`SearchOptions::context_after`]
+/// (grep-style `-B`/`-A`/`--context`).
+pub type LineMatch = (usize, String, bool);
 
 /// One result item returned by every search function.
 #[derive(Debug, Clone)]
@@ -95,6 +101,14 @@ pub struct SearchOptions {
     /// Lines longer than this are skipped during content search.
     pub max_line_length: usize,
 
+    /// Lines of leading context to include before each content match
+    /// (like grep's `-B`). Ignored for filename search.
+    pub context_before: usize,
+
+    /// Lines of trailing context to include after each content match
+    /// (like grep's `-A`). Ignored for filename search.
+    pub context_after: usize,
+
     /// Bytes read to probe for binary content.
     pub binary_check_bytes: usize,
 
@@ -115,6 +129,8 @@ impl SearchOptions {
             include_patterns: split_csv(&cfg.default_include),
             exclude_dirs: cfg.excluded_dirs(),
             max_line_length: cfg.max_line_length,
+            context_before: 0,
+            context_after: 0,
             binary_check_bytes: cfg.binary_check_bytes,
             max_results: cfg.max_results,
         }
@@ -149,6 +165,8 @@ impl SearchOptionsBuilder {
                 ".cache".into(),
             ],
             max_line_length: 10_000,
+            context_before: 0,
+            context_after: 0,
             binary_check_bytes: 1024,
             max_results: 0,
         })
@@ -186,6 +204,22 @@ impl SearchOptionsBuilder {
     }
     pub fn search_in_files(mut self, v: bool) -> Self {
         self.0.search_in_files = v;
+        self
+    }
+    /// Lines of context before each match (like grep `-B`).
+    pub fn context_before(mut self, n: usize) -> Self {
+        self.0.context_before = n;
+        self
+    }
+    /// Lines of context after each match (like grep `-A`).
+    pub fn context_after(mut self, n: usize) -> Self {
+        self.0.context_after = n;
+        self
+    }
+    /// Symmetric context before and after each match (like grep `-C`).
+    pub fn context(mut self, n: usize) -> Self {
+        self.0.context_before = n;
+        self.0.context_after = n;
         self
     }
     pub fn include_patterns(mut self, p: Vec<String>) -> Self {
@@ -267,6 +301,8 @@ fn search_in_file(
     ci: bool,
     max_line: usize,
     check_bytes: usize,
+    context_before: usize,
+    context_after: usize,
 ) -> Vec<LineMatch> {
     if is_binary(path, check_bytes) {
         return vec![];
@@ -280,11 +316,20 @@ fn search_in_file(
     } else {
         pattern.to_string()
     };
-    BufReader::new(file)
+
+    // Read every line up front so context windows (-A/-B/--context) can
+    // reach backward and forward from a match. Content search already
+    // excludes binaries and very-long lines, so files reaching here are
+    // expected to be reasonably sized text files.
+    let all_lines: Vec<String> = BufReader::new(file)
         .lines()
+        .filter_map(|lr| lr.ok())
+        .collect();
+
+    let match_indices: Vec<usize> = all_lines
+        .iter()
         .enumerate()
-        .filter_map(|(i, lr)| {
-            let line = lr.ok()?;
+        .filter_map(|(i, line)| {
             if line.len() > max_line {
                 return None;
             }
@@ -294,10 +339,45 @@ fn search_in_file(
                 line.clone()
             };
             if cmp.contains(&pat) {
-                Some((i + 1, line))
+                Some(i)
             } else {
                 None
             }
+        })
+        .collect();
+
+    if match_indices.is_empty() {
+        return vec![];
+    }
+
+    if context_before == 0 && context_after == 0 {
+        return match_indices
+            .into_iter()
+            .map(|i| (i + 1, all_lines[i].clone(), true))
+            .collect();
+    }
+
+    // Merge each match's [i-before, i+after] window into a set of
+    // non-overlapping (possibly touching) ranges, same as grep's `-A`/`-B`
+    // behaviour when matches are close enough that their context overlaps.
+    let last_idx = all_lines.len().saturating_sub(1);
+    let mut ranges: Vec<(usize, usize)> = Vec::new();
+    for &i in &match_indices {
+        let start = i.saturating_sub(context_before);
+        let end = (i + context_after).min(last_idx);
+        match ranges.last_mut() {
+            Some(last) if start <= last.1 + 1 => {
+                last.1 = last.1.max(end);
+            }
+            _ => ranges.push((start, end)),
+        }
+    }
+
+    let match_set: HashSet<usize> = match_indices.into_iter().collect();
+    ranges
+        .into_iter()
+        .flat_map(|(start, end)| {
+            (start..=end).map(|i| (i + 1, all_lines[i].clone(), match_set.contains(&i)))
         })
         .collect()
 }
@@ -396,6 +476,8 @@ pub fn fast_find(
                             opts.case_insensitive,
                             opts.max_line_length,
                             opts.binary_check_bytes,
+                            opts.context_before,
+                            opts.context_after,
                         );
                         if lines.is_empty() {
                             None
@@ -504,6 +586,8 @@ fn walk_dir(
                     opts.case_insensitive,
                     opts.max_line_length,
                     opts.binary_check_bytes,
+                    opts.context_before,
+                    opts.context_after,
                 );
                 if !lines.is_empty() {
                     matches.push(SearchMatch::Content { path, lines });
@@ -522,4 +606,188 @@ fn cap(mut v: Vec<SearchMatch>, limit: usize) -> Vec<SearchMatch> {
         v.truncate(limit);
     }
     v
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use tempfile::TempDir;
+
+    fn make_file(dir: &Path, name: &str, content: &str) -> PathBuf {
+        let p = dir.join(name);
+        fs::File::create(&p).unwrap().write_all(content.as_bytes()).unwrap();
+        p
+    }
+
+    fn interrupted() -> Arc<AtomicBool> {
+        Arc::new(AtomicBool::new(false))
+    }
+
+    #[test]
+    fn no_context_returns_only_matching_lines() {
+        let tmp = TempDir::new().unwrap();
+        make_file(
+            tmp.path(),
+            "a.txt",
+            "one\ntwo\nMATCH\nfour\nfive\n",
+        );
+
+        let opts = SearchOptions::builder("MATCH")
+            .base_dir(tmp.path())
+            .search_in_files(true)
+            .build();
+        let results = fast_find(&opts, interrupted()).unwrap();
+        assert_eq!(results.len(), 1);
+        match &results[0] {
+            SearchMatch::Content { lines, .. } => {
+                assert_eq!(lines.len(), 1);
+                assert_eq!(lines[0], (3, "MATCH".to_string(), true));
+            }
+            _ => panic!("expected content match"),
+        }
+    }
+
+    #[test]
+    fn after_context_includes_trailing_lines() {
+        let tmp = TempDir::new().unwrap();
+        make_file(
+            tmp.path(),
+            "a.txt",
+            "one\ntwo\nMATCH\nfour\nfive\nsix\n",
+        );
+
+        let opts = SearchOptions::builder("MATCH")
+            .base_dir(tmp.path())
+            .search_in_files(true)
+            .context_after(2)
+            .build();
+        let results = fast_find(&opts, interrupted()).unwrap();
+        match &results[0] {
+            SearchMatch::Content { lines, .. } => {
+                assert_eq!(
+                    lines,
+                    &vec![
+                        (3, "MATCH".to_string(), true),
+                        (4, "four".to_string(), false),
+                        (5, "five".to_string(), false),
+                    ]
+                );
+            }
+            _ => panic!("expected content match"),
+        }
+    }
+
+    #[test]
+    fn before_context_includes_leading_lines() {
+        let tmp = TempDir::new().unwrap();
+        make_file(
+            tmp.path(),
+            "a.txt",
+            "one\ntwo\nMATCH\nfour\nfive\n",
+        );
+
+        let opts = SearchOptions::builder("MATCH")
+            .base_dir(tmp.path())
+            .search_in_files(true)
+            .context_before(2)
+            .build();
+        let results = fast_find(&opts, interrupted()).unwrap();
+        match &results[0] {
+            SearchMatch::Content { lines, .. } => {
+                assert_eq!(
+                    lines,
+                    &vec![
+                        (1, "one".to_string(), false),
+                        (2, "two".to_string(), false),
+                        (3, "MATCH".to_string(), true),
+                    ]
+                );
+            }
+            _ => panic!("expected content match"),
+        }
+    }
+
+    #[test]
+    fn context_clamps_to_file_bounds() {
+        let tmp = TempDir::new().unwrap();
+        make_file(tmp.path(), "a.txt", "MATCH\ntwo\n");
+
+        let opts = SearchOptions::builder("MATCH")
+            .base_dir(tmp.path())
+            .search_in_files(true)
+            .context(5)
+            .build();
+        let results = fast_find(&opts, interrupted()).unwrap();
+        match &results[0] {
+            SearchMatch::Content { lines, .. } => {
+                // No line before index 0, and file ends at line 2.
+                assert_eq!(
+                    lines,
+                    &vec![(1, "MATCH".to_string(), true), (2, "two".to_string(), false)]
+                );
+            }
+            _ => panic!("expected content match"),
+        }
+    }
+
+    #[test]
+    fn overlapping_context_windows_merge() {
+        let tmp = TempDir::new().unwrap();
+        // Matches on line 2 and line 4; with 2 lines of context each side the
+        // windows [0,4] and [2,6] overlap and should merge into one block
+        // with no separator gap, and no duplicate lines.
+        make_file(
+            tmp.path(),
+            "a.txt",
+            "one\nMATCH\nthree\nMATCH\nfive\nsix\nseven\n",
+        );
+
+        let opts = SearchOptions::builder("MATCH")
+            .base_dir(tmp.path())
+            .search_in_files(true)
+            .context(2)
+            .build();
+        let results = fast_find(&opts, interrupted()).unwrap();
+        match &results[0] {
+            SearchMatch::Content { lines, .. } => {
+                let line_nums: Vec<usize> = lines.iter().map(|l| l.0).collect();
+                // Contiguous run 1..=6, no gaps => merged into a single window.
+                assert_eq!(line_nums, vec![1, 2, 3, 4, 5, 6]);
+                assert!(lines[1].2); // line 2 is a match
+                assert!(lines[3].2); // line 4 is a match
+                assert!(!lines[0].2 && !lines[2].2 && !lines[4].2 && !lines[5].2);
+            }
+            _ => panic!("expected content match"),
+        }
+    }
+
+    #[test]
+    fn distant_matches_keep_separate_windows() {
+        let tmp = TempDir::new().unwrap();
+        let mut content = String::from("MATCH\n");
+        for i in 0..20 {
+            content.push_str(&format!("filler{i}\n"));
+        }
+        content.push_str("MATCH\n");
+        make_file(tmp.path(), "a.txt", &content);
+
+        let opts = SearchOptions::builder("MATCH")
+            .base_dir(tmp.path())
+            .search_in_files(true)
+            .context(1)
+            .build();
+        let results = fast_find(&opts, interrupted()).unwrap();
+        match &results[0] {
+            SearchMatch::Content { lines, .. } => {
+                let line_nums: Vec<usize> = lines.iter().map(|l| l.0).collect();
+                // First match: lines 1-2 (no line 0). Second match: lines
+                // 21-22. The two windows must not be contiguous.
+                assert_eq!(line_nums, vec![1, 2, 21, 22]);
+            }
+            _ => panic!("expected content match"),
+        }
+    }
 }

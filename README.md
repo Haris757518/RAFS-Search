@@ -107,6 +107,15 @@ fsearch find README -C -d 3
 
 # Search in a specific directory, verbose
 fsearch find config -p ~/projects -d 3 -v
+
+# Content search with 2 lines of context after each match (grep -A)
+fsearch find TODO -f -A 2 ./src
+
+# Content search with 3 lines of context before each match (grep -B)
+fsearch find panic -f -B 3 ./src
+
+# Symmetric context: 2 lines before AND after (grep -C)
+fsearch find unwrap -f --context 2 ./src
 ```
 
 ### `fsearch dup` (or `fs dup`)
@@ -140,6 +149,9 @@ fsearch dup . --skip-binary -n 20
 | `-p, --path <DIR>` | Search root directory | `.` |
 | `-D, --no-dir` | Exclude directories from results | off |
 | `-f, --file` | Search inside file contents | off |
+| `-A, --after-context <N>` | Show N lines of context after each match (grep `-A`) | `0` |
+| `-B, --before-context <N>` | Show N lines of context before each match (grep `-B`) | `0` |
+| `--context <N>` | Show N lines of context before *and* after (grep `-C`); overridden per-side by `-A`/`-B` | `0` |
 | `-i, --include <GLOBS>` | Include only files matching patterns (CSV) | all |
 | `-x, --exclude <DIRS>` | Extra directory names to skip (CSV) | — |
 | `-n, --max-results <N>` | Limit results (0 = unlimited) | `0` |

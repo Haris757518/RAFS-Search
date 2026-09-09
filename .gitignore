@@ -20,3 +20,6 @@ PLAN.md
 *.bak
 # PT backup directory
 .pt/
+
+# Added entries (1 items)
+*.patch

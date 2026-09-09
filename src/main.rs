@@ -78,6 +78,8 @@ fn run_find(args: cli::FindArgs, cfg: &Config) {
         );
     }
 
+    let (context_before, context_after) = args.resolved_context();
+
     let opts = SearchOptions {
         base_dirs: base_dirs.clone(),
         pattern: args.pattern.clone(),
@@ -88,6 +90,8 @@ fn run_find(args: cli::FindArgs, cfg: &Config) {
         include_patterns,
         exclude_dirs,
         max_line_length: cfg.max_line_length,
+        context_before,
+        context_after,
         binary_check_bytes: cfg.binary_check_bytes,
         max_results: if args.max_results > 0 {
             args.max_results
@@ -110,6 +114,12 @@ fn run_find(args: cli::FindArgs, cfg: &Config) {
             case_insensitive,
             args.search_in_files,
         ));
+        if context_before > 0 || context_after > 0 {
+            printer.print_info(&format!(
+                "Context: -B {}  -A {}",
+                context_before, context_after
+            ));
+        }
     }
 
     configure_rayon(cfg.threads);
