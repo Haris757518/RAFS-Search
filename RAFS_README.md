@@ -25,14 +25,18 @@ The interface supports folder browsing, filename/content search, depth settings,
 
 The chart compares sequential recursive search (original method 2) with parallel fsearch (original method 1) on the same workload. Each method receives one warm-up and five measured runs, with alternating order. Every run must return the same file paths before a chart is shown. Graph values are median total elapsed milliseconds, including process launch and output collection. Lower is better; either method may win.
 
+![Measured desktop comparison](desktop-app/comparison-preview.png)
+
+The screenshot shows a real small-fixture test; your results will depend on the folder and workload you choose.
+
 This is not a comparison against Windows Explorer, indexed search, or an adaptive engine. Cache state, background activity and process-launch overhead influence results. Filename/content matching settings are held constant. Content-result path sets are compared; matching line text is not compared by the benchmark.
 
 ## Project ownership and upstream attribution
 
 - RAFS desktop interface, comparison demonstration, and project documentation: **Haris K / Haris757518**.
-- Original Rust fsearch engine: **Hadi Cahyadi / cumulus13**, https://github.com/cumulus13/fsearch.
+- Reused-engine provenance and original author credit: see [AUTHORS.md](AUTHORS.md) and [LICENSE](LICENSE).
 - Original baseline commit: `e74d9d5b72662a23f7ae8a0dde527be3d2517365`.
 - Original MIT LICENSE, author credits, Rust package names, and full Git history are retained.
 - `master` preserves the original baseline; `rafs-development` contains the RAFS additions.
 
-The upstream [README.md](README.md) is retained. See [BASELINE_NOTES.md](BASELINE_NOTES.md) for baseline inspection and [desktop-app/README.md](desktop-app/README.md) for app instructions.
+The original documentation is retained in [UPSTREAM_README.md](UPSTREAM_README.md). See [BASELINE_NOTES.md](BASELINE_NOTES.md) for baseline inspection and [desktop-app/README.md](desktop-app/README.md) for app instructions.
