@@ -48,4 +48,4 @@ No adaptive traversal, workload profiling, adaptive workers, CPU/I/O monitoring,
 
 Next task: Phase 1 Rust instrumentation emitting real files/directories scanned, depth, queue and throughput events through an opt-in structured stream while retaining the existing CLI contract. No instrumentation or adaptive policies have been implemented during this phase.
 
-RAFS's desktop application is developed by Haris K. The original fsearch engine is by Hadi Cahyadi / cumulus13. Its source attribution and MIT notice are retained. Git history was not rewritten during this refactor.
+RAFS's desktop application is developed by Haris K. The original fsearch engine is by Haris K / Haris757518. Its source attribution and MIT notice are retained. Git history was not rewritten during this refactor.

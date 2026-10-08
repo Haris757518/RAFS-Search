@@ -15,7 +15,7 @@ internal sealed class ThroughputView : Panel
         var area = new ChartArea("Throughput"); area.AxisX.Title = "Seconds"; area.AxisY.Title = "Files / second"; area.AxisY.Minimum = 0; chart.ChartAreas.Add(area);
         chart.Series.Add(new Series("Files per second") { ChartType = SeriesChartType.Line, Color = Theme.Accent, BorderWidth = 2 });
         Controls.Add(chart);
-        empty.Text = "Runtime throughput telemetry is not available in the baseline engine."; empty.Dock = DockStyle.Fill; empty.TextAlign = ContentAlignment.MiddleCenter;
+        empty.Text = "Runtime throughput telemetry will be available after RAFS instrumentation."; empty.Dock = DockStyle.Fill; empty.TextAlign = ContentAlignment.MiddleCenter; empty.Padding = new Padding(14);
         empty.ForeColor = Theme.Muted; empty.BackColor = Theme.Surface; Controls.Add(empty); empty.BringToFront();
     }
     public void Reset() { start = null; chart.Series[0].Points.Clear(); empty.Visible = true; chart.Visible = false; }
@@ -35,7 +35,7 @@ internal sealed class DecisionTimeline : Panel
         list.Dock = DockStyle.Fill; list.Visible = false; list.View = View.Details; list.FullRowSelect = true;
         list.Columns.Add("Time", 90); list.Columns.Add("Event", 160); list.Columns.Add("Change", 120); list.Columns.Add("Reason", 360); list.Columns.Add("Measured value", 130);
         Controls.Add(list);
-        empty.Text = "No adaptive decisions — RAFS controller not yet enabled."; empty.Dock = DockStyle.Fill; empty.TextAlign = ContentAlignment.MiddleCenter;
+        empty.Text = "Adaptive controller not enabled yet."; empty.Dock = DockStyle.Fill; empty.TextAlign = ContentAlignment.MiddleCenter; empty.Padding = new Padding(14);
         empty.ForeColor = Theme.Muted; Controls.Add(empty); empty.BringToFront();
     }
     public void Present(IList<AdaptiveDecision> decisions) {

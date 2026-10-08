@@ -13,8 +13,15 @@ internal sealed class SearchOptionsPanel : TableLayoutPanel
         ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         Folder.Text = settings.RememberFolder && Directory.Exists(settings.LastFolder) ? settings.LastFolder : Path.Combine(SearchRunner.Root, Directory.Exists(Path.Combine(SearchRunner.Root, "src")) ? "src" : "demo-data");
         Query.Text = settings.LastPattern;
-        var fields = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, ColumnCount = 2, Margin = new Padding(0) };
-        fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36)); fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 64));
+        var fields = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, ColumnCount = manual ? 3 : 2, Margin = new Padding(0) };
+        fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, manual ? 30 : 36)); fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, manual ? 43 : 64));
+        if (manual) {
+            fields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 27));
+            var modes = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = new Padding(0) };
+            modes.Controls.Add(new RadioButton { Text = "Manual / Research\nAvailable", Checked = true, AutoSize = true });
+            modes.Controls.Add(new RadioButton { Text = "Adaptive — Planned", Enabled = false, AutoSize = true });
+            fields.Controls.Add(Theme.Field("Search Mode", modes), 2, 0);
+        }
         fields.Controls.Add(Theme.Field("Query / Pattern", Query), 0, 0);
         var location = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, ColumnCount = 2, Margin = new Padding(0) };
         location.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); location.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -23,17 +30,15 @@ internal sealed class SearchOptionsPanel : TableLayoutPanel
         location.Controls.Add(Folder, 0, 0); location.Controls.Add(browse, 1, 0);
         fields.Controls.Add(Theme.Field("Search Location", location), 1, 0); Theme.Row(this, fields, false);
         Theme.Row(this, Theme.Flow(Content, CaseSensitive), false);
-        Method.DropDownStyle = ComboBoxStyle.DropDownList; Method.Width = 260;
+        Method.DropDownStyle = ComboBoxStyle.DropDownList; Method.Width = 320;
         Theme.MethodCombo(Method);
         Method.Items.AddRange(new object[] { "Method 1 — WalkDir + Rayon", "Method 2 — Recursive DFS" }); Method.SelectedIndex = settings.DefaultMethod - 1;
         Depth = Theme.Number(settings.DefaultDepth, 1000); Threads = Theme.Number(settings.DefaultThreads, 256);
         Method.SelectedIndexChanged += delegate { Threads.Enabled = Method.SelectedIndex == 0; };
         Threads.Enabled = Method.SelectedIndex == 0;
         if (manual) {
-            var modes = Theme.Flow(new RadioButton { Text = "Manual / Research", Checked = true, AutoSize = true }, new RadioButton { Text = "Adaptive (Recommended) — Planned", Enabled = false, AutoSize = true });
-            Theme.Row(this, modes, false);
-            Theme.Row(this, Theme.Flow(Theme.Field("Traversal / Method", Method), Theme.Field("Threads (0 = auto)", Threads), Theme.Field("Depth", Depth)), false);
-            Theme.Row(this, Theme.Label("Depth 0 searches the selected folder only. Method 2 is sequential. Adaptive mode requires the future RAFS controller.", true), false);
+            Theme.Row(this, Theme.Flow(Theme.Field("Method", Method), Theme.Field("Threads (0 = auto)", Threads), Theme.Field("Maximum Depth", Depth)), false);
+            Theme.Row(this, Theme.Label("Depth 0: selected folder only. Method 2: sequential. Adaptive mode is planned.", true), false);
         }
     }
     public SearchRequest GetRequest() { var request = new SearchRequest { Folder = Folder.Text, Pattern = Query.Text, Method = Method.SelectedIndex + 1, Depth = (int)Depth.Value, Threads = (int)Threads.Value, Content = Content.Checked, CaseSensitive = CaseSensitive.Checked }; request.Validate(); return request; }

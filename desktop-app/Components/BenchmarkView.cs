@@ -17,12 +17,16 @@ internal sealed class BenchmarkView : TableLayoutPanel
         correctness.Set("Not measured", false); Controls.Add(correctness, 0, 0);
         chart.Dock = DockStyle.Fill; chart.BackColor = Theme.Surface;
         var area = new ChartArea("Median"); area.AxisY.Minimum = 0; area.AxisY.Title = "Elapsed milliseconds"; area.AxisY.MajorGrid.LineColor = Theme.Border; area.AxisX.MajorGrid.Enabled = false;
-        area.AxisX.LabelStyle.Font = Theme.Ui(9); area.AxisY.LabelStyle.Font = Theme.Mono(9); chart.ChartAreas.Add(area); chart.Titles.Add("Median Search Time — lower is better");
+        area.AxisX.LabelStyle.Font = Theme.Ui(10); area.AxisY.LabelStyle.Font = Theme.Mono(10); chart.ChartAreas.Add(area);
+        chart.Titles.Add(new Title("Median Search Time", Docking.Top, Theme.Ui(12, FontStyle.Bold), Theme.Text));
+        chart.Titles.Add(new Title("Lower is better", Docking.Top, Theme.Ui(10), Theme.Muted));
         Controls.Add(chart, 0, 1);
         table.Dock = DockStyle.Fill; table.ReadOnly = true; table.AllowUserToAddRows = false; table.RowHeadersVisible = false; table.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-        table.BackgroundColor = Theme.Surface; table.BorderStyle = BorderStyle.None; table.EnableHeadersVisualStyles = false; table.ColumnHeadersDefaultCellStyle.BackColor = Theme.Background; table.ColumnHeadersDefaultCellStyle.Font = Theme.Ui(9, FontStyle.Bold);
+        table.BackgroundColor = Theme.Surface; table.BorderStyle = BorderStyle.None; table.SelectionMode = DataGridViewSelectionMode.FullRowSelect; table.MultiSelect = false; Theme.StyleGrid(table);
         foreach (string name in new[] { "Strategy", "Threads", "Median", "Min", "Max", "Std Dev", "Matches", "Correct", "Relative Speed" }) table.Columns.Add(name, name);
         table.Columns[0].FillWeight = 160;
+        table.Columns[0].MinimumWidth = 145; table.Columns[1].MinimumWidth = 100;
+        foreach (DataGridViewColumn column in table.Columns) { column.SortMode = DataGridViewColumnSortMode.NotSortable; column.MinimumWidth = Math.Max(column.MinimumWidth, 70); }
         Controls.Add(table, 0, 2); details.MaximumSize = new Size(1500, 0); Controls.Add(details, 0, 3);
         SizeChanged += delegate { details.MaximumSize = new Size(Math.Max(1, ClientSize.Width - details.Margin.Horizontal), 0); };
     }
@@ -36,10 +40,11 @@ internal sealed class BenchmarkView : TableLayoutPanel
         foreach (var measurement in result.Measurements) {
             double ratio = measurement.Median > 0 ? baseline / measurement.Median : 0;
             var configuration = measurement.Configuration;
-            int index = series.Points.AddXY(configuration.Name, measurement.Median);
+            string prefix = result.Plan.Lab ? "" : (series.Points.Count == 0 ? "A · " : "B · ");
+            int index = series.Points.AddXY(prefix + configuration.Name, measurement.Median);
             series.Points[index].Color = index == 0 ? Color.FromArgb(110, 126, 140) : Theme.Accent;
             series.Points[index].Label = measurement.Median.ToString("0.0") + " ms";
-            table.Rows.Add(configuration.Method == 2 ? "Recursive DFS" : "WalkDir + Rayon", configuration.Method == 2 ? "1 (sequential)" : configuration.Threads == 0 ? "Auto" : configuration.Threads.ToString(),
+            table.Rows.Add(prefix + (configuration.Method == 2 ? "Recursive DFS" : "WalkDir + Rayon"), configuration.Method == 2 ? "1 (sequential)" : configuration.Threads == 0 ? "Auto" : configuration.Threads.ToString(),
                 Theme.Milliseconds(measurement.Median), Theme.Milliseconds(measurement.Minimum), Theme.Milliseconds(measurement.Maximum), Theme.Milliseconds(measurement.StdDev), result.Matches.Paths.Count, "Yes", ratio.ToString("0.00") + "×");
         }
         chart.Series.Add(series);

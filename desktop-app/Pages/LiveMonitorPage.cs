@@ -16,7 +16,7 @@ internal sealed class LiveMonitorPage : AppPage
     {
         Theme.Row(Body, Theme.Flow(status), false); Theme.Row(Body, MetricCard.Row(elapsed, matches, strategy, workers), false);
         var context = new SectionPanel("Current session — real application state"); workload.MaximumSize = new Size(1500, 0); Theme.Row(context, workload, false); Theme.Row(Body, context, false);
-        var planned = new SectionPanel("Filesystem workload — available after RAFS instrumentation");
+        var planned = new SectionPanel("Filesystem workload — Awaiting RAFS instrumentation");
         var metrics = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, ColumnCount = 4 };
         metrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 32)); metrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18)); metrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 32)); metrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18));
         int i = 0;

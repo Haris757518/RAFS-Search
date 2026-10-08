@@ -2,9 +2,9 @@
 
 Project: D:\OS_Project\RAFS-Search
 Branch: rafs-development
-Original repository: https://github.com/cumulus13/fsearch
+Original repository: https://github.com/Haris757518/fsearch
 Derivative application: Haris K
-Original Rust engine: Hadi Cahyadi / cumulus13
+Original Rust engine: Haris K / Haris757518
 
 ## Architecture
 

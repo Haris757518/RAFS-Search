@@ -16,7 +16,7 @@ internal sealed class ComparePage : AppPage
         this.session = session;
         var input = new SectionPanel(""); options = new SearchOptionsPanel(settings, false); Theme.Row(input, options, false);
         depth = Theme.Number(settings.DefaultDepth, 1000); runs = Theme.Number(settings.ComparisonRuns, 15, 1); warmups = Theme.Number(1, 5);
-        Theme.Row(input, Theme.Flow(Theme.Field("Depth", depth), Theme.Field("Measured Runs", runs), Theme.Field("Warm-up Runs", warmups)), false);
+        Theme.Row(input, Theme.Flow(Theme.Field("Maximum Depth", depth), Theme.Field("Warm-up Runs", warmups), Theme.Field("Measured Runs", runs)), false);
         var configs = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, ColumnCount = 2 };
         configs.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50)); configs.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         configA = new ConfigurationPicker("Configuration A", 2, 1); configB = new ConfigurationPicker("Configuration B", 1, settings.DefaultThreads);
@@ -37,7 +37,7 @@ internal sealed class ComparePage : AppPage
         cancel.Enabled = current.IsBusy && current.State != SessionState.Cancelling; export.Enabled = !current.IsBusy && view.Result != null;
         if (current.Comparison != null && shown != current.Comparison) { shown = current.Comparison; view.Present(shown); }
         if (current.Operation == "Compare") {
-            status.Text = current.IsBusy && current.Progress != null ? "Test " + current.Progress.Test + " of " + current.Progress.Tests + " · " + current.Progress.Request.MethodName + " · " + current.Progress.Phase : current.Message;
+            status.Text = current.IsBusy && current.Progress != null ? "Configuration " + current.Progress.Test + " of " + current.Progress.Tests + " · " + current.Progress.Request.MethodName + " · " + current.Progress.Phase : current.Message;
             if (wasBusy && current.State == SessionState.Failed) view.Error(current.Message);
             if (wasBusy && current.State == SessionState.Cancelled) view.Clear("Comparison cancelled — incomplete timings discarded");
         }

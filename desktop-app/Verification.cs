@@ -65,6 +65,13 @@ internal static class Verification
             var a = Run(new SearchRequest { Folder = Path.Combine(SearchRunner.Root, "src"), Pattern = "*.rs", Method = 1 });
             var b = Run(new SearchRequest { Folder = Path.Combine(SearchRunner.Root, "src"), Pattern = "*.rs", Method = 2 });
             Check(a.Succeeded && b.Succeeded && a.Paths.Count == 10 && new HashSet<string>(a.Paths).SetEquals(b.Paths), "real src/*.rs baseline regression: 10 identical files");
+            var review = new BenchmarkPlan { Request = new SearchRequest { Folder = Path.Combine(SearchRunner.Root, "src"), Pattern = "*.rs" }, Runs = 2, Warmups = 1 };
+            review.Configurations.Add(new RunConfiguration { Method = 2, Threads = 1 }); review.Configurations.Add(new RunConfiguration { Method = 1, Threads = 2 });
+            var reviewComparison = new BenchmarkRunner(new BaselineCliBackend()).Run(review, delegate { }, delegate { return false; }, delegate { });
+            Check(reviewComparison.Matches.Paths.Count == 10 && reviewComparison.Measurements.All(m => m.Samples.Count == 2), "Review 1 src/*.rs comparison: both methods / identical 10-file set");
+            review.Lab = true;
+            var reviewBenchmark = new BenchmarkRunner(new BaselineCliBackend()).Run(review, delegate { }, delegate { return false; }, delegate { });
+            Check(reviewBenchmark.Matches.Paths.Count == 10 && reviewBenchmark.Measurements.Count == 2, "Review 1 small real src/*.rs benchmark");
             var plan = new BenchmarkPlan { Request = new SearchRequest { Folder = fixture, Pattern = "demo_*.txt" }, Runs = 3, Warmups = 1 };
             plan.Configurations.Add(new RunConfiguration { Method = 1, Threads = 1 }); plan.Configurations.Add(new RunConfiguration { Method = 1, Threads = 2 });
             var comparison = new BenchmarkRunner(new BaselineCliBackend()).Run(plan, delegate { }, delegate { return false; }, delegate { });
@@ -100,6 +107,13 @@ internal static class Verification
                 app.Session.StartBenchmark(lab); Wait(app.Session); Check(app.Session.LabResult != null, "session Benchmark Lab completion");
                 app.Session.StartSearch(plan.Request); Wait(app.Session);
                 foreach (string page in new[] { "Search", "Live Monitor", "Compare", "Benchmark Lab", "Settings" }) { Capture(app, page, 1200, 750); Capture(app, page, 1440, 900); }
+                app.WindowState = FormWindowState.Maximized; Application.DoEvents();
+                foreach (string page in new[] { "Search", "Live Monitor", "Compare", "Benchmark Lab", "Settings" }) {
+                    app.ShowPage(page); Application.DoEvents();
+                    Check(app.WindowState == FormWindowState.Maximized && app.CurrentPage == page, page + " navigation in maximized mode");
+                    using (var bitmap = new Bitmap(app.Width, app.Height)) { app.DrawToBitmap(bitmap, new Rectangle(Point.Empty, bitmap.Size)); bitmap.Save(Path.Combine(artifacts, page.Replace(" ", "-").ToLowerInvariant() + "-maximized.png")); }
+                }
+                Check(app.AutoScaleMode == AutoScaleMode.Dpi, "main window uses native DPI scaling; observed DPI " + app.DeviceDpi);
                 app.Close();
             }
             Check(File.Exists(Path.Combine(SearchRunner.Root, "LICENSE")), "View License target exists");

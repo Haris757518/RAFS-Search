@@ -26,9 +26,10 @@ internal sealed class SettingsPage : AppPage
         Theme.Row(prefs, Theme.Flow(remember, logging, new CheckBox { Text = "Runtime Statistics — unavailable", Enabled = false, AutoSize = true }), false);
         Theme.Row(prefs, Theme.Flow(save), false); Theme.Row(prefs, status, false); Theme.Row(sections, prefs, false);
         var about = new SectionPanel("RAFS Search");
-        Theme.Row(about, Theme.Label("Runtime-Adaptive File System Search Using Workload-Aware Traversal and Concurrency Selection"), false);
-        Theme.Row(about, Theme.Label("Operating Systems Project · Developed by Haris K"), false);
-        Theme.Row(about, Theme.Label("Built upon the open-source fsearch baseline. Original attribution, Git history and MIT licensing are retained.", true), false);
+        Theme.Row(about, Theme.Label("Runtime-Adaptive File System Search Using\nWorkload-Aware Traversal and Concurrency Selection"), false);
+        Theme.Row(about, Theme.Label("Operating Systems Project"), false);
+        Theme.Row(about, Theme.Label("Developed by Haris K"), false);
+        Theme.Row(about, Theme.Label("Built upon the open-source fsearch baseline.\nOriginal MIT attribution retained.", true), false);
         Theme.Row(about, Theme.Label("Current engine: fixed WalkDir + Rayon / recursive DFS. Adaptive algorithms and runtime instrumentation are not implemented.", true), false);
         var license = Theme.Button("View License"); var folder = Theme.Button("Open Project Folder");
         license.Click += delegate { try { DesktopActions.ViewLicense(); } catch (Exception e) { status.Text = e.Message; } };

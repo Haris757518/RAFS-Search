@@ -9,7 +9,7 @@ internal sealed class SearchPage : AppPage
     internal readonly SearchOptionsPanel Options;
     internal readonly ResultGrid Grid = new ResultGrid();
     private readonly TextBox output = new TextBox();
-    private readonly MetricCard matches = new MetricCard("Matches"), elapsed = new MetricCard("Engine elapsed"), total = new MetricCard("Total including launch");
+    private readonly Label matches = Theme.Label("Matches: --"), elapsed = Theme.Label("Engine: --"), total = Theme.Label("Total: --");
     private readonly StatusBadge status = new StatusBadge();
     private readonly ProgressBar progress = new ProgressBar { Style = ProgressBarStyle.Marquee, Width = 110, Height = 15 };
     private readonly Button start = Theme.Button("Start Search", true), cancel = Theme.Button("Cancel"), reveal = Theme.Button("Show in Folder"), export = Theme.Button("Export CSV");
@@ -18,10 +18,13 @@ internal sealed class SearchPage : AppPage
     public SearchPage(SearchSession session, AppSettings settings) : base("Search", "Search the live filesystem efficiently.")
     {
         this.session = session;
+        start.BackColor = System.Drawing.Color.FromArgb(0, 135, 93); start.FlatAppearance.BorderColor = start.BackColor;
+        start.FlatAppearance.MouseOverBackColor = System.Drawing.Color.FromArgb(0, 112, 77); start.FlatAppearance.MouseDownBackColor = System.Drawing.Color.FromArgb(0, 92, 63);
         var input = new SectionPanel(""); Options = new SearchOptionsPanel(settings, true); Theme.Row(input, Options, false);
         var demo = Theme.Button("Load demo folder"); demo.Click += delegate { Options.Demo(); };
         Theme.Row(input, Theme.Flow(start, cancel, demo), false); Theme.Row(Body, input, false);
-        Theme.Row(Body, MetricCard.Row(matches, elapsed, total), false);
+        matches.Font = elapsed.Font = total.Font = Theme.Mono(10);
+        var summary = Theme.Flow(matches, elapsed, total); summary.Padding = new Padding(10, 6, 10, 6); Theme.Row(Body, summary, false);
         banner.ForeColor = Theme.Error; banner.MaximumSize = new System.Drawing.Size(1600, 0); Theme.Row(Body, banner, false);
         var tabs = new TabControl { Dock = DockStyle.Fill };
         var files = new TabPage("Results"); var logs = new TabPage("Raw output / content matches");
@@ -33,7 +36,7 @@ internal sealed class SearchPage : AppPage
         reveal.Click += delegate { Reveal(); }; Grid.CellDoubleClick += delegate(object sender, DataGridViewCellEventArgs e) { if (e.RowIndex >= 0) Reveal(); };
         export.Click += delegate { Export(); };
     }
-    internal void Start() { banner.Text = ""; try { session.StartSearch(Options.GetRequest()); } catch (Exception e) { if (!(e is ArgumentException || e is InvalidOperationException)) throw; banner.Text = e.Message; } }
+    internal void Start() { banner.Text = ""; banner.ForeColor = Theme.Error; try { session.StartSearch(Options.GetRequest()); } catch (Exception e) { if (!(e is ArgumentException || e is InvalidOperationException)) throw; banner.Text = e.Message; } }
     private void Reveal() { try { if (Grid.SelectedPath == null) return; if (!File.Exists(Grid.SelectedPath)) throw new IOException("The selected file is no longer available."); DesktopActions.Reveal(Grid.SelectedPath); banner.Text = ""; } catch (Exception e) { banner.Text = e.Message; } }
     private void Export() {
         if (session.LastSearchReport == null) return;
@@ -45,13 +48,14 @@ internal sealed class SearchPage : AppPage
     {
         Options.Enabled = !current.IsBusy; start.Enabled = !current.IsBusy; cancel.Enabled = current.IsBusy && current.State != SessionState.Cancelling;
         bool running = current.IsBusy && current.Operation == "Search";
+        Grid.EmptyMessage = running ? "Searching… Results appear when the search completes." : current.Operation != "Search" ? "Search results will appear here." : current.State == SessionState.Completed ? "No matching files found. Try another pattern or folder." : current.State == SessionState.Cancelled ? "Search cancelled. Select Start Search to try again." : current.State == SessionState.Failed ? "Search could not complete. Check the message above." : "Enter a pattern and folder, then select Start Search.";
         progress.Visible = running; status.Set(running ? current.Message + "  " + current.Elapsed.TotalSeconds.ToString("0.0") + " s" : current.Operation == "Search" ? current.Message : "Search results retained", current.State == SessionState.Failed && current.Operation == "Search");
         if (revision != current.SearchRevision) {
             revision = current.SearchRevision; Grid.SetReport(current.LastSearchReport);
             var report = current.LastSearchReport;
             output.Text = report == null ? "" : report.Output + (String.IsNullOrWhiteSpace(report.Error) ? "" : "\r\nMessages:\r\n" + report.Error);
-            matches.Set(report == null ? "--" : report.Paths.Count.ToString()); elapsed.Set(report == null ? "--" : report.EngineTime);
-            total.Set(report == null ? "--" : Theme.Milliseconds(report.TotalMilliseconds), "Process launch + output capture");
+            matches.Text = "Matches: " + (report == null ? "--" : report.Paths.Count.ToString()); elapsed.Text = "Engine: " + (report == null ? "--" : report.EngineTime);
+            total.Text = "Total including launch: " + (report == null ? "--" : Theme.Milliseconds(report.TotalMilliseconds));
         }
         if (current.State == SessionState.Failed && current.Operation == "Search") { banner.ForeColor = Theme.Error; banner.Text = current.Message; }
         reveal.Enabled = export.Enabled = !current.IsBusy && Grid.MatchCount > 0;
