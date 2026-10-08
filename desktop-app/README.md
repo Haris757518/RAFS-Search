@@ -2,7 +2,7 @@
 
 Double-click **RAFS-Search.exe** in the repository root. It opens a Windows desktop interface without a terminal. Keep it in this folder: it runs the original `target/release/fsearch.exe` search engine.
 
-1. Click **Load demo folder** (uses the harmless baseline fixture when available), or **Browse...** to choose a folder.
+1. Click **Load demo folder** (uses the bundled harmless `demo-data` folder), or **Browse...** to choose a folder.
 2. Enter a filename pattern such as `*.txt`, `*.pdf`, or `report`.
 3. Choose method 1 (WalkDir + Rayon) or method 2 (recursive DFS).
 4. Choose depth (0 searches only the selected folder). For method 1, choose a fixed thread count; 0 means automatic. Method 2 is sequential.
