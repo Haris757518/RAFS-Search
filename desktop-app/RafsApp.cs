@@ -197,7 +197,7 @@ internal sealed class RafsForm : Form
         inputs.Controls.Add(LabelAt("Search folder", 0, 10));
         folder.SetBounds(115, 7, 770, 28);
         folder.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
-        folder.Text = Path.Combine(Engine.Root, "src");
+        folder.Text = Directory.Exists(Path.Combine(Engine.Root, "src")) ? Path.Combine(Engine.Root, "src") : Path.Combine(Engine.Root, "demo-data");
         inputs.Controls.Add(folder);
         var browse = MakeButton("Browse...", false);
         browse.SetBounds(900, 5, 130, 32);
@@ -207,7 +207,7 @@ internal sealed class RafsForm : Form
 
         inputs.Controls.Add(LabelAt("Pattern / text", 0, 53));
         pattern.SetBounds(115, 50, 440, 28);
-        pattern.Text = "*.rs";
+        pattern.Text = Directory.Exists(Path.Combine(Engine.Root, "src")) ? "*.rs" : "report_*.txt";
         inputs.Controls.Add(pattern);
         content.Text = "Search file contents"; content.SetBounds(580, 51, 190, 28);
         sensitive.Text = "Case sensitive"; sensitive.SetBounds(790, 51, 160, 28);
@@ -229,7 +229,7 @@ internal sealed class RafsForm : Form
 
         search.SetBounds(115, 135, 130, 34); cancel.SetBounds(255, 135, 100, 34); cancel.Enabled = false;
         var demo = MakeButton("Load demo folder", false); demo.SetBounds(375, 135, 175, 34);
-        demo.Click += delegate { string fixture = Path.GetFullPath(Path.Combine(Engine.Root, "..", "baseline-verification", "data")); folder.Text = Directory.Exists(fixture) ? fixture : Path.Combine(Engine.Root, "src"); pattern.Text = Directory.Exists(fixture) ? "baseline_*.txt" : "*.rs"; content.Checked = false; sensitive.Checked = false; depth.Value = 5; };
+        demo.Click += delegate { folder.Text = Path.Combine(Engine.Root, "demo-data"); pattern.Text = "report_*.txt"; content.Checked = false; sensitive.Checked = false; depth.Value = 5; };
         inputs.Controls.Add(search); inputs.Controls.Add(demo);
         compare.SetBounds(570, 135, 190, 34); inputs.Controls.Add(compare);
         // Cancel stays enabled while the search inputs are disabled.
