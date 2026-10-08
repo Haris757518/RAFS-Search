@@ -119,12 +119,30 @@ impl<'a> Printer<'a> {
                         num,
                         bold_hex(path.display().to_string(), &self.cfg.color_path)
                     );
-                    for (line_num, line_text) in lines {
+                    let mut prev_line_num: Option<usize> = None;
+                    for (line_num, line_text, is_match) in lines {
+                        // A gap in line numbers means we've crossed into a
+                        // different context window — mark it like grep's `--`.
+                        if let Some(prev) = prev_line_num {
+                            if *line_num > prev + 1 {
+                                println!("   {}", hex_color("⋯", "#555555"));
+                            }
+                        }
+                        prev_line_num = Some(*line_num);
+
+                        // Matched lines use a solid bar + the normal line
+                        // colour; context lines (-A/-B/--context) use a
+                        // dotted bar + a dimmer colour, like grep's `-`/`:`.
+                        let (sep, text_color) = if *is_match {
+                            ("│", self.cfg.color_line_text.as_str())
+                        } else {
+                            ("┊", "#777777")
+                        };
                         println!(
                             "   {} {} {}",
                             bold_hex(format!("{:>5}", line_num), &self.cfg.color_line_num),
-                            hex_color("│", "#555555"),
-                            hex_color(line_text.trim_end(), &self.cfg.color_line_text),
+                            hex_color(sep, "#555555"),
+                            hex_color(line_text.trim_end(), text_color),
                         );
                     }
                 }

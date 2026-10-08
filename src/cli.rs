@@ -65,7 +65,13 @@ pub enum Command {
     \n\n  # Mix positional + flag\
     \n  fsearch find TODO -f -i '*.py' ./lib -p ./scripts -d 5\
     \n\n  # Case-sensitive, depth 5\
-    \n  fsearch find README -C -d 5\n"
+    \n  fsearch find README -C -d 5\
+    \n\n  # Content search with 2 lines of context after each match (like grep -A)\
+    \n  fsearch find TODO -f -A 2 ./src\
+    \n\n  # Content search with 3 lines of context before each match (like grep -B)\
+    \n  fsearch find panic -f -B 3 ./src\
+    \n\n  # Symmetric context: 2 lines before AND after (like grep -C)\
+    \n  fsearch find unwrap -f --context 2 ./src\n"
 )]
 pub struct FindArgs {
     /// Pattern to search for (supports `*` and `?` wildcards)
@@ -103,6 +109,19 @@ pub struct FindArgs {
     #[arg(short = 'f', long = "file", action = ArgAction::SetTrue)]
     pub search_in_files: bool,
 
+    /// Print NUM lines of trailing context after each match (like grep -A)
+    #[arg(short = 'A', long = "after-context", value_name = "NUM", default_value = "0")]
+    pub after_context: usize,
+
+    /// Print NUM lines of leading context before each match (like grep -B)
+    #[arg(short = 'B', long = "before-context", value_name = "NUM", default_value = "0")]
+    pub before_context: usize,
+
+    /// Print NUM lines of context both before and after each match (like grep -C).
+    /// Overrides -A/-B unless they are also given explicitly.
+    #[arg(long = "context", value_name = "NUM")]
+    pub context: Option<usize>,
+
     /// Only include files matching these glob patterns (comma-separated)
     #[arg(short = 'i', long, value_name = "GLOBS", default_value = "")]
     pub include: String,
@@ -138,6 +157,18 @@ impl FindArgs {
         } else {
             all
         }
+    }
+
+    /// Resolve `(before, after)` context line counts.
+    ///
+    /// `--context N` sets both symmetrically; an explicitly-given `-A`/`-B`
+    /// takes precedence for its side (matching grep's behaviour where
+    /// `-A`/`-B` override `-C`).
+    pub fn resolved_context(&self) -> (usize, usize) {
+        let ctx = self.context.unwrap_or(0);
+        let before = if self.before_context > 0 { self.before_context } else { ctx };
+        let after = if self.after_context > 0 { self.after_context } else { ctx };
+        (before, after)
     }
 }
 
