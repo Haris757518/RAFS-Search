@@ -1,3 +1,24 @@
+# RAFS Search — OS Project by Haris K
+
+**Runtime-Adaptive File System Search Using Workload-Aware Traversal and Concurrency Selection**
+
+Project developer: [Haris K / Haris757518](https://github.com/Haris757518).
+
+The current project provides a Windows desktop app and a measured comparison graph using the original fsearch engines. **Adaptive traversal and concurrency are planned; they are not implemented yet.**
+
+- [RAFS project overview and demonstration](RAFS_README.md)
+- [Desktop app instructions](desktop-app/README.md)
+- [Original baseline inspection](BASELINE_NOTES.md)
+- [Authors and contributions](AUTHORS.md)
+
+Build with `cargo build --release` and then `.\desktop-app\build.ps1` on Windows. Double-click `RAFS-Search.exe`, select a folder, and click **Search** or **Compare + graph**.
+
+![Measured comparison in the desktop app](desktop-app/comparison-preview.png)
+
+The screenshot shows an actual small-fixture test, not a promised speedup. The app recomputes the graph for your selected folder. The original source, MIT LICENSE, author attribution and full history are retained; original project documentation follows below.
+
+---
+
 # ⚡ fsearch — Fast File Search & Duplicate Finder
 
 [![Crates.io](https://img.shields.io/crates/v/fast-search.svg)](https://crates.io/crates/fast-search)
