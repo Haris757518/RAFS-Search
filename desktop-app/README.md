@@ -15,7 +15,7 @@ For content search, check **Search file contents** and enter literal text. Read 
 
 Click **Compare + graph** to compare the original sequential recursive method against parallel fsearch on the selected folder and pattern. Choose the parallel thread count before starting. The app warms up both methods, alternates execution order, measures five runs each, checks equal file-path sets on every run, and graphs median elapsed milliseconds including process launch/output collection. Lower bars mean faster searches. Either method may win; small datasets can be dominated by launch overhead. This is not Windows Explorer or an adaptive-engine benchmark.
 
-The interface and comparison demonstration are by **Haris K ([Haris757518](https://github.com/Haris757518))**. Original engine attribution remains **Hadi Cahyadi / cumulus13**.
+The interface and comparison demonstration are by **Haris K ([Haris757518](https://github.com/Haris757518))**. Reused-engine attribution is recorded in `AUTHORS.md` and the original MIT LICENSE.
 
 ## Build
 

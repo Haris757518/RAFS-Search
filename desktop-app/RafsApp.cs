@@ -1,6 +1,6 @@
 // RAFS desktop demonstration interface. MIT license; see ../LICENSE.
 // RAFS interface and comparison demonstration by Haris K (Haris757518).
-// Runs the unmodified fsearch CLI by Hadi Cahyadi.
+// Runs the unmodified fsearch CLI; upstream provenance is in ../AUTHORS.md.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -279,7 +279,7 @@ internal sealed class RafsForm : Form
         rawTab.Controls.Add(details); layout.Controls.Add(tabs, 0, 3);
         status.Dock = DockStyle.Fill; status.TextAlign = ContentAlignment.MiddleLeft; status.Text = "Depth 0 searches only the selected folder. Double-click a result to locate it.";
         layout.Controls.Add(status, 0, 4);
-        var credit = new Label { Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, ForeColor = Color.FromArgb(89, 105, 124), Text = "RAFS by Haris K (Haris757518)  |  Original fsearch by Hadi Cahyadi  |  MIT License" };
+        var credit = new Label { Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft, ForeColor = Color.FromArgb(89, 105, 124), Text = "RAFS Search by Haris K (Haris757518)  |  OS Project  |  MIT License" };
         layout.Controls.Add(credit, 0, 5);
         AcceptButton = search;
         search.Click += delegate { BeginSearch(); };
