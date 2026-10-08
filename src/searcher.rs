@@ -321,10 +321,7 @@ fn search_in_file(
     // reach backward and forward from a match. Content search already
     // excludes binaries and very-long lines, so files reaching here are
     // expected to be reasonably sized text files.
-    let all_lines: Vec<String> = BufReader::new(file)
-        .lines()
-        .filter_map(|lr| lr.ok())
-        .collect();
+    let all_lines: Vec<String> = BufReader::new(file).lines().map_while(Result::ok).collect();
 
     let match_indices: Vec<usize> = all_lines
         .iter()
@@ -618,7 +615,10 @@ mod tests {
 
     fn make_file(dir: &Path, name: &str, content: &str) -> PathBuf {
         let p = dir.join(name);
-        fs::File::create(&p).unwrap().write_all(content.as_bytes()).unwrap();
+        fs::File::create(&p)
+            .unwrap()
+            .write_all(content.as_bytes())
+            .unwrap();
         p
     }
 
@@ -629,11 +629,7 @@ mod tests {
     #[test]
     fn no_context_returns_only_matching_lines() {
         let tmp = TempDir::new().unwrap();
-        make_file(
-            tmp.path(),
-            "a.txt",
-            "one\ntwo\nMATCH\nfour\nfive\n",
-        );
+        make_file(tmp.path(), "a.txt", "one\ntwo\nMATCH\nfour\nfive\n");
 
         let opts = SearchOptions::builder("MATCH")
             .base_dir(tmp.path())
@@ -653,11 +649,7 @@ mod tests {
     #[test]
     fn after_context_includes_trailing_lines() {
         let tmp = TempDir::new().unwrap();
-        make_file(
-            tmp.path(),
-            "a.txt",
-            "one\ntwo\nMATCH\nfour\nfive\nsix\n",
-        );
+        make_file(tmp.path(), "a.txt", "one\ntwo\nMATCH\nfour\nfive\nsix\n");
 
         let opts = SearchOptions::builder("MATCH")
             .base_dir(tmp.path())
@@ -683,11 +675,7 @@ mod tests {
     #[test]
     fn before_context_includes_leading_lines() {
         let tmp = TempDir::new().unwrap();
-        make_file(
-            tmp.path(),
-            "a.txt",
-            "one\ntwo\nMATCH\nfour\nfive\n",
-        );
+        make_file(tmp.path(), "a.txt", "one\ntwo\nMATCH\nfour\nfive\n");
 
         let opts = SearchOptions::builder("MATCH")
             .base_dir(tmp.path())
@@ -726,7 +714,10 @@ mod tests {
                 // No line before index 0, and file ends at line 2.
                 assert_eq!(
                     lines,
-                    &vec![(1, "MATCH".to_string(), true), (2, "two".to_string(), false)]
+                    &vec![
+                        (1, "MATCH".to_string(), true),
+                        (2, "two".to_string(), false)
+                    ]
                 );
             }
             _ => panic!("expected content match"),

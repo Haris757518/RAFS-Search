@@ -110,11 +110,21 @@ pub struct FindArgs {
     pub search_in_files: bool,
 
     /// Print NUM lines of trailing context after each match (like grep -A)
-    #[arg(short = 'A', long = "after-context", value_name = "NUM", default_value = "0")]
+    #[arg(
+        short = 'A',
+        long = "after-context",
+        value_name = "NUM",
+        default_value = "0"
+    )]
     pub after_context: usize,
 
     /// Print NUM lines of leading context before each match (like grep -B)
-    #[arg(short = 'B', long = "before-context", value_name = "NUM", default_value = "0")]
+    #[arg(
+        short = 'B',
+        long = "before-context",
+        value_name = "NUM",
+        default_value = "0"
+    )]
     pub before_context: usize,
 
     /// Print NUM lines of context both before and after each match (like grep -C).
@@ -166,8 +176,16 @@ impl FindArgs {
     /// `-A`/`-B` override `-C`).
     pub fn resolved_context(&self) -> (usize, usize) {
         let ctx = self.context.unwrap_or(0);
-        let before = if self.before_context > 0 { self.before_context } else { ctx };
-        let after = if self.after_context > 0 { self.after_context } else { ctx };
+        let before = if self.before_context > 0 {
+            self.before_context
+        } else {
+            ctx
+        };
+        let after = if self.after_context > 0 {
+            self.after_context
+        } else {
+            ctx
+        };
         (before, after)
     }
 }
