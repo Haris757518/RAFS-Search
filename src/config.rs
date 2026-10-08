@@ -1,5 +1,5 @@
 // File: src\config.rs
-// Author: Hadi Cahyadi <cumulus13@gmail.com>
+// Author: Haris K <242903453+Haris757518@users.noreply.github.com>
 // Date: 2026-05-11
 // Description:
 // License: MIT

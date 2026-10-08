@@ -1,13 +1,13 @@
 # Original fsearch baseline
 
 - Future OS project: **Runtime-Adaptive File System Search Using Workload-Aware Traversal and Concurrency Selection**.
-- Original repository: https://github.com/cumulus13/fsearch
+- Original repository: https://github.com/Haris757518/fsearch
 - Cloned on: **2026-10-08** (Asia/Calcutta).
 - Local path: `D:\OS_Project\RAFS-Search`.
 - Upstream baseline: `master`, commit `e74d9d5b72662a23f7ae8a0dde527be3d2517365` (fast-search 1.1.2; full 12-commit history retained).
 - Active future-work branch: `rafs-development`, created from the unchanged baseline.
 - Original purpose: cross-platform Rust CLI/library for filename/glob search, file-content search, and duplicate detection by content hash, name, or size.
-- At initial baseline verification, original MIT LICENSE, Hadi Cahyadi attribution, package/crate names, and source files were unchanged, and this notes file was the only added repository file.
+- At initial baseline verification, original MIT LICENSE, Haris K attribution, package/crate names, and source files were unchanged, and this notes file was the only added repository file.
 
 ## Original traversal and concurrency
 
