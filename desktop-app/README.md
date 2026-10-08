@@ -1,43 +1,51 @@
-# RAFS desktop demonstration
+# RAFS Windows desktop application
 
-Double-click **RAFS-Search.exe** in the repository root. It opens a Windows desktop interface without a terminal. Keep it in this folder: it runs the original `target/release/fsearch.exe` search engine.
+Double-click `D:\OS_Project\RAFS-Search\RAFS-Search.exe`. Keep `RAFS-Search.exe.config` beside it, and keep `target/release/fsearch.exe` and `LICENSE` in the project folder.
 
-1. Click **Load demo folder** (uses the bundled harmless `demo-data` folder), or **Browse...** to choose a folder.
-2. Enter a filename pattern such as `*.txt`, `*.pdf`, or `report`.
-3. Choose method 1 (WalkDir + Rayon) or method 2 (recursive DFS).
-4. Choose depth (0 searches only the selected folder). For method 1, choose a fixed thread count; 0 means automatic. Method 2 is sequential.
-5. Click **Search**. Results appear when the original engine finishes; the interface remains responsive. **Cancel** stops the search process.
-6. Double-click a result to select it in File Explorer, or use **Export CSV**.
+## Five pages
 
-For content search, check **Search file contents** and enter literal text. Read matching lines in the **Search output / content matches** tab. Engine elapsed time and total time including process launch are displayed separately; these are demonstration timings, not controlled benchmarks.
+- Search: filename/glob and literal content search, case sensitivity, both methods, depth, threads, cancellation, result grid, raw content output, CSV and Show in Folder. Method 2 is sequential; depth 0 searches only the selected folder.
+- Live Monitor: real shared session state, query, folder, configured method/depth/threads, stopwatch elapsed time and final matches. Active workers and workload metrics remain --. Throughput and adaptive decisions have explicit empty states. No sample values are plotted.
+- Compare: independent A/B configurations, including same-method thread comparisons, optional warm-ups and 1–15 measured runs. Execution order rotates each round. Every path set is validated against the first configuration. The zero-based horizontal chart shows actual median process times. Minimum, maximum, population standard deviation, matches and relative speed are included. A mismatch suppresses the graph.
+- Benchmark Lab: custom folder; selectable method 2 and method 1 with 1, 2, 4, 8 or automatic / 0 threads. All six configurations are initially selected. The first selected configuration is the correctness and relative-speed reference (method 2 when selected). Real progress, cancellation and CSV export work. Dataset generators are planned and generate nothing.
+- Settings / About: saved next-launch defaults, future maximum-worker setting, optional real application diagnostic logging, light theme/system fonts, provenance, View License and Open Project Folder. Adaptive mode and runtime statistics are unavailable.
 
-## Compare search methods
+Switching pages retains inputs/results and does not start or cancel operations. Scroll the main content area to reach lower sections at smaller sizes.
 
-Click **Compare + graph** to compare the original sequential recursive method against parallel fsearch on the selected folder and pattern. Choose the parallel thread count before starting. The app warms up both methods, alternates execution order, measures five runs each, checks equal file-path sets on every run, and graphs median elapsed milliseconds including process launch/output collection. Lower bars mean faster searches. Either method may win; small datasets can be dominated by launch overhead. This is not Windows Explorer or an adaptive-engine benchmark.
+## Architecture
 
-The interface and comparison demonstration are by **Haris K ([Haris757518](https://github.com/Haris757518))**. Reused-engine attribution is recorded in `AUTHORS.md` and the original MIT LICENSE.
+Program starts AppShell, which owns five persistent page instances and SearchSession. The session coordinates background work, UI-thread completion, cancellation, timestamps and completed reports. Pages observe the shared state and never launch engine processes directly. ISearchBackend/BaselineCliBackend, SearchRunner and BenchmarkRunner isolate engine invocation and experiment scheduling. Reusable components provide layout, cards, charts, result grids and configuration selection.
 
-## Build
+Each invocation uses a unique `target/desktop-runs/<id>/fsearch.toml` containing its thread setting. The working directory is isolated; its config is removed after completion/cancellation. User-global fsearch configuration is not written. stdout/stderr are captured as UTF-8. Total timings include process launch and output collection; the CLI separately reports integer-millisecond engine time.
 
-From the repository root in PowerShell:
+RuntimeTelemetry, AdaptiveDecision and IRuntimeTelemetrySource are integration APIs only. Nullable metrics represent unavailable values. The baseline backend declares no live telemetry/adaptive capability and emits no such events.
+
+Settings are stored in `target/desktop-settings.xml`. Optional logging records actual application transitions in `target/desktop-diagnostics.log`. Defaults apply at next launch; logging applies immediately. Maximum Workers is stored only for future integration.
+
+## Build and verification
 
 ```powershell
+Set-Location D:\OS_Project\RAFS-Search
 cargo build --release
 .\desktop-app\build.ps1
-```
+.\RAFS-Search.exe
 
-The interface is a small C#/.NET Framework Windows Forms application using the compiler already installed with Windows. No GUI dependencies were added to Cargo. The Rust engine, CLI, original package names, MIT LICENSE and author attribution remain unchanged. A future adaptive engine can be exposed through this interface later.
-
-The GUI creates an isolated configuration under `target/desktop-runs` for each search and deletes it afterward. This makes the selected thread count explicit without modifying your user configuration. Other runtime settings use the original defaults. Filename and content searches are supported; duplicate detection remains available through the original CLI.
-
-## Verification
-
-```powershell
 $check = Start-Process .\RAFS-Search.exe -ArgumentList '--self-test' -PassThru -Wait
 $check.ExitCode
 Get-Content .\target\desktop-verification\checks.txt
+
+.\target\release\fsearch.exe find '*.rs' -p .\src -d 5 -m 1
+.\target\release\fsearch.exe find '*.rs' -p .\src -d 5 -m 2
 ```
 
-The integration check exercises both methods, 1/2 fixed threads for method 1, recursive search, depth 0, content search, no matches, a folder containing spaces, and trailing path separators. It also tests the repeated comparison and renders the form and graph to `target/desktop-verification/desktop-preview.png` and `comparison-preview.png` for layout inspection.
+The script recursively compiles C# with the installed Windows compiler, embeds the DPI manifest and copies the .NET configuration beside the executable. No Cargo GUI dependency is added. The app targets .NET Framework 4.8, opts into PerMonitorV2 and uses WinForms DPI scaling. Installed Segoe UI Variable / Segoe UI is used for UI; Cascadia Mono / Consolas for metrics/logs. No fonts are bundled. Physical 125%/150% monitor switching requires manual verification. DrawToBitmap may omit native combo text and scrolled content; use the actual app for final visual review.
 
-All GUI changes are on `rafs-development`. The original `master` baseline is retained. **No adaptive workload profiling, DFS/BFS switching, adaptive thread control, CPU/I/O monitoring, or dashboard has been implemented.**
+Real regression checks cover src/*.rs, both methods, 1/2/4/8/0 threads, depth 0, content, case sensitivity, invalid directory, no matches, quoted arguments, cancellation, configurable comparison, changed-result detection, six-way benchmarks, actual CSV data, settings and all-page navigation/resizing. Outputs are under `target/desktop-verification`.
+
+## Limits and next step
+
+No adaptive traversal, workload profiling, adaptive workers, CPU/I/O monitoring, dark theme, dataset generator or duplicate-search GUI is implemented. These are comparisons of baseline configurations; no adaptive speedup is claimed. Small workloads may be dominated by launch overhead and OS caches. Final results arrive only when the CLI exits. Content matches appear in raw output. Numbered CLI path parsing is retained; future integration should use machine-readable events.
+
+Next task: Phase 1 Rust instrumentation emitting real files/directories scanned, depth, queue and throughput events through an opt-in structured stream while retaining the existing CLI contract. No instrumentation or adaptive policies have been implemented during this phase.
+
+RAFS's desktop application is developed by Haris K. The original fsearch engine is by Hadi Cahyadi / cumulus13. Its source attribution and MIT notice are retained. Git history was not rewritten during this refactor.

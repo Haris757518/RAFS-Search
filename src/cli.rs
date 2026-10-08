@@ -1,5 +1,5 @@
 // File: src\cli.rs
-// Author: Haris K <242903453+Haris757518@users.noreply.github.com>
+// Author: Hadi Cahyadi <cumulus13@gmail.com>
 // Date: 2026-05-11
 // Description:
 // License: MIT
@@ -26,7 +26,7 @@ use clap_color_help::default_styles;
     \n  fsearch dup   [PATHS…]             Find duplicate files\
     \n  fsearch config                     Config helpers\
     \n\nRun `fsearch <SUBCOMMAND> --help` for full option details.",
-    author = "Haris K <242903453+Haris757518@users.noreply.github.com>"
+    author = "Hadi Cahyadi <cumulus13@gmail.com>"
 )]
 pub struct Cli {
     #[command(subcommand)]

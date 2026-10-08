@@ -1,4 +1,5 @@
 /target
+/RAFS-Search.exe.config
 *.log
 .DS_Store
 

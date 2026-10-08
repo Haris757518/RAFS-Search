@@ -1,13 +1,13 @@
 # Original fsearch baseline
 
 - Future OS project: **Runtime-Adaptive File System Search Using Workload-Aware Traversal and Concurrency Selection**.
-- Original repository: https://github.com/Haris757518/fsearch
+- Original repository: https://github.com/cumulus13/fsearch
 - Cloned on: **2026-10-08** (Asia/Calcutta).
 - Local path: `D:\OS_Project\RAFS-Search`.
 - Upstream baseline: `master`, commit `e74d9d5b72662a23f7ae8a0dde527be3d2517365` (fast-search 1.1.2; full 12-commit history retained).
 - Active future-work branch: `rafs-development`, created from the unchanged baseline.
 - Original purpose: cross-platform Rust CLI/library for filename/glob search, file-content search, and duplicate detection by content hash, name, or size.
-- At initial baseline verification, original MIT LICENSE, Haris K attribution, package/crate names, and source files were unchanged, and this notes file was the only added repository file.
+- At initial baseline verification, original MIT LICENSE, Hadi Cahyadi attribution, package/crate names, and source files were unchanged, and this notes file was the only added repository file.
 
 ## Original traversal and concurrency
 
@@ -71,3 +71,7 @@ To select a fixed thread count, create `fsearch.toml` in the working directory c
 At the user's request, a separate Windows desktop interface was added under `desktop-app/` on `rafs-development`, compiled to `RAFS-Search.exe` in the repository root. It launches the existing original `target/release/fsearch.exe` through its CLI. The original Rust source, Cargo manifests/lockfile, LICENSE, and `master` branch remain unchanged. See `desktop-app/README.md` for double-click usage, rebuilding, and integration checks. The interface supports both baseline methods, fixed thread settings, filename/content search, cancellation, results export, and demonstration elapsed times. It does not implement adaptive functionality.
 
 The desktop interface now credits Haris K (Haris757518) for the RAFS additions while retaining upstream attribution in provenance/license files and original sources. A comparison graph measures sequential method 2 versus parallel method 1 using one warm-up and five measured runs each, alternating order and checking identical file-path sets. Median total process elapsed time is graphed. This is a baseline-method comparison, not evidence of an adaptive speedup. RAFS documentation is in `RAFS_README.md` and the main `README.md`; original documentation is preserved in `UPSTREAM_README.md`.
+
+
+## Five-page desktop refactor (2026-10-08)
+The wrapper now includes Search, Live Monitor, Compare, Benchmark Lab and Settings/About. It displays real baseline process timings and clearly marks unavailable adaptive telemetry. See desktop-app/README.md and desktop-app/IMPLEMENTATION_REPORT.md. Original Rust algorithms, Cargo metadata and license notice have been restored to the upstream baseline content; no Git history was rewritten during this refactor. Adaptive workload-aware functionality remains unimplemented.
