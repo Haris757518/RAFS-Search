@@ -85,9 +85,18 @@ pub struct FindArgs {
     #[arg(short = 'p', long = "path", value_name = "PATH", action = ArgAction::Append)]
     pub path_flags: Vec<String>,
 
-    /// Search method: 1 = walkdir+rayon (fast), 2 = recursive
-    #[arg(short = 'm', long, value_name = "1|2", default_value = "1")]
+    /// Search method: 1 = walkdir+rayon, 2 = recursive, 3 = adaptive
+    #[arg(short = 'm', long, value_name = "1|2|3", default_value = "1")]
     pub method: SearchMethod,
+    /// Maximum adaptive workers (0 = available logical CPUs)
+    #[arg(long, default_value = "0")]
+    pub max_workers: usize,
+    /// Emit structured RAFS runtime events on stderr (adaptive method only)
+    #[arg(long)]
+    pub telemetry: bool,
+    /// Emit machine-readable timing and UTF-8 hex result paths on stderr
+    #[arg(long)]
+    pub report_events: bool,
 
     /// Case-insensitive matching (default on)
     #[arg(short = 'c', long = "case-insensitive", action = ArgAction::SetTrue)]
@@ -196,6 +205,8 @@ pub enum SearchMethod {
     Walkdir = 1,
     #[value(name = "2")]
     Recursive = 2,
+    #[value(name = "3")]
+    Adaptive = 3,
 }
 
 // ── dup ───────────────────────────────────────────────────────────────────────

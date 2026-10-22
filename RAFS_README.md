@@ -4,7 +4,7 @@
 
 OS project by **Haris K ([Haris757518](https://github.com/Haris757518))**.
 
-The current implementation adds a Windows desktop demonstration and measured comparison graph around the original Rust fsearch engine. **Runtime-adaptive functionality is planned and has not yet been implemented.**
+The current implementation includes original fsearch baselines, runtime-adaptive scheduling and workers, live metrics, controlled benchmarks, workload generation, dark theme and duplicate discovery. Current instructions and measurement limits: [PROJECT_STATUS.md](PROJECT_STATUS.md) and [README.md](README.md). The sections below retain the earlier Review I demonstration description.
 
 ## Run the desktop app
 

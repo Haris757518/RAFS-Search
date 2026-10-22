@@ -1,10 +1,14 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
-    branches: ["main", "master", "dev"]
+    branches: ["main", "master", "dev", "rafs-development"]
   pull_request:
-    branches: ["main", "master"]
+    branches: ["main", "master", "rafs-development"]
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -36,9 +40,6 @@ jobs:
 
       - name: cargo fmt --check
         run: cargo fmt --all -- --check
-
-      - name: cargo clippy (fmt)
-        run: cargo clippy --fix --all-targets --all-features
 
       - name: cargo clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
@@ -72,6 +73,47 @@ jobs:
 
       - name: cargo test
         run: cargo test --all-features
+
+  desktop:
+    name: Windows desktop verification and portable package
+    needs: lint
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build package
+        shell: pwsh
+        run: ./desktop-app/package.ps1
+      - name: Verify portable application
+        shell: pwsh
+        run: ./desktop-app/verify-release.ps1
+      - name: Build installer with verified compiler
+        shell: pwsh
+        run: |
+          ./desktop-app/bootstrap-installer-tools.ps1
+          ./desktop-app/build-installer.ps1
+      - name: Verify installation, upgrade and uninstall
+        shell: pwsh
+        run: ./desktop-app/verify-installer.ps1
+      - name: Upload desktop and verification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: RAFS-Search-${{ matrix.os }}
+          path: |
+            target/releases/*.zip
+            target/releases/*.sha256
+            target/releases/*-Setup.exe
+            target/releases/*/verification/*.txt
+            target/releases/*/verification/*.csv
+            target/releases/*/verification/layout-accessibility/*
+            target/releases/*/target/feature-verification/*
+            target/installer-verification.txt
+          retention-days: 14
 
   # ── Build release artefacts (on every push to main) ───────────────────────────
   build:

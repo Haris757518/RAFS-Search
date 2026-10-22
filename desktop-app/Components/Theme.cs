@@ -6,8 +6,11 @@ using System.Windows.Forms;
 
 internal static class Theme
 {
-    public static readonly Color Background = Color.FromArgb(243, 243, 243), Surface = Color.White, Text = Color.FromArgb(26, 28, 28),
+    public static Color Background = Color.FromArgb(243, 243, 243), Surface = Color.White, Text = Color.FromArgb(26, 28, 28),
         Muted = Color.FromArgb(80, 88, 100), Accent = Color.FromArgb(0, 120, 212), Border = Color.FromArgb(226, 226, 226), Error = Color.FromArgb(162, 45, 45);
+    public static bool Dark;
+    public static void SetDark(bool dark){Dark=dark;if(dark){Background=Color.FromArgb(27,29,34);Surface=Color.FromArgb(36,39,45);Text=Color.FromArgb(234,237,240);Muted=Color.FromArgb(173,182,194);Border=Color.FromArgb(65,70,80);Error=Color.FromArgb(255,142,142);}else{Background=Color.FromArgb(243,243,243);Surface=Color.White;Text=Color.FromArgb(26,28,28);Muted=Color.FromArgb(80,88,100);Border=Color.FromArgb(226,226,226);Error=Color.FromArgb(162,45,45);}}
+    public static void ApplyInputs(Control parent){foreach(Control c in parent.Controls){if(c is TextBoxBase || c is ComboBox || c is NumericUpDown || c is TabPage){c.BackColor=Surface;c.ForeColor=Text;}if(c is CheckBox || c is RadioButton){c.ForeColor=Text;}ApplyInputs(c);}}
     private static readonly string[] Fonts = new InstalledFontCollection().Families.Select(f => f.Name).ToArray();
     public static readonly string UiFamily = Fonts.Contains("Segoe UI Variable") ? "Segoe UI Variable" : Fonts.Contains("Segoe UI Variable Text") ? "Segoe UI Variable Text" : "Segoe UI";
     public static readonly string MonoFamily = Fonts.Contains("Cascadia Mono") ? "Cascadia Mono" : "Consolas";
@@ -18,8 +21,8 @@ internal static class Theme
         var button = new Button { Text = text, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(10, 3, 10, 3), Margin = new Padding(0, 3, 8, 3),
             FlatStyle = FlatStyle.Flat, BackColor = primary ? Accent : Surface, ForeColor = primary ? Color.White : Text, Cursor = Cursors.Hand, UseVisualStyleBackColor = false };
         button.FlatAppearance.BorderColor = primary ? Accent : Border;
-        button.FlatAppearance.MouseOverBackColor = primary ? Color.FromArgb(0, 98, 175) : Color.FromArgb(235, 242, 248);
-        button.FlatAppearance.MouseDownBackColor = primary ? Color.FromArgb(0, 80, 145) : Color.FromArgb(224, 235, 246); return button;
+        button.FlatAppearance.MouseOverBackColor = primary ? Color.FromArgb(0, 98, 175) : Dark?Color.FromArgb(48,57,68):Color.FromArgb(235, 242, 248);
+        button.FlatAppearance.MouseDownBackColor = primary ? Color.FromArgb(0, 80, 145) : Dark?Color.FromArgb(55,66,80):Color.FromArgb(224, 235, 246); return button;
     }
     public static FlowLayoutPanel Flow(params Control[] controls) { var flow = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top, WrapContents = true, Margin = new Padding(0) }; flow.Controls.AddRange(controls); return flow; }
     public static TableLayoutPanel Stack() { var table = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, Margin = new Padding(0), Padding = new Padding(0) }; table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); return table; }
@@ -31,6 +34,7 @@ internal static class Theme
     }
     public static NumericUpDown Number(int value, int max, int min = 0) { return new NumericUpDown { Minimum = min, Maximum = max, Value = Math.Max(min, Math.Min(max, value)), Width = 82, Margin = new Padding(0, 3, 16, 6) }; }
     public static Control Field(string name, Control input) {
+        input.AccessibleName = name;
         var panel = new TableLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Dock = DockStyle.Fill, ColumnCount = 1, Margin = new Padding(0, 0, 16, 4) };
         panel.RowStyles.Add(new RowStyle(SizeType.AutoSize)); panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         panel.Controls.Add(Label(name), 0, 0); input.Dock = DockStyle.Fill; panel.Controls.Add(input, 0, 1); return panel;
@@ -52,9 +56,10 @@ internal static class Theme
         grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = Background; grid.ColumnHeadersDefaultCellStyle.SelectionForeColor = Text;
         grid.ColumnHeadersDefaultCellStyle.Font = Ui(10, FontStyle.Bold);
         grid.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-        grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(235, 247, 255); grid.DefaultCellStyle.SelectionForeColor = Text;
+        grid.DefaultCellStyle.BackColor=Surface;grid.DefaultCellStyle.ForeColor=Text;
+        grid.DefaultCellStyle.SelectionBackColor = Dark?Color.FromArgb(35,65,87):Color.FromArgb(235, 247, 255); grid.DefaultCellStyle.SelectionForeColor = Text;
         grid.DefaultCellStyle.Padding = new Padding(6, 3, 6, 3);
-        grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(249, 251, 252);
+        grid.AlternatingRowsDefaultCellStyle.BackColor = Dark?Background:Color.FromArgb(249, 251, 252);
         grid.RowTemplate.Height = grid.Font.Height + 10;
         grid.FontChanged += delegate { grid.RowTemplate.Height = grid.Font.Height + 10; };
     }

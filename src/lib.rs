@@ -47,6 +47,7 @@
 //! println!("{} groups, {} wasted", summary.groups_found, summary.wasted_human());
 //! ```
 
+pub mod adaptive;
 pub mod binary;
 pub mod colors;
 pub mod config;

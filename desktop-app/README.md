@@ -1,5 +1,7 @@
 # RAFS Windows desktop application
 
+**Current implementation (12 October 2026):** see [PROJECT_STATUS.md](../PROJECT_STATUS.md). Adaptive scheduling, live telemetry, PowerShell/index comparisons, background workload generation, dark theme and a read-only Duplicates page are implemented. The original five-page baseline milestone description below is historical and its planned/unavailable notes no longer describe the current application. Use the top-level README and PROJECT_STATUS for current run instructions.
+
 Double-click `D:\OS_Project\RAFS-Search\RAFS-Search.exe`. Keep `RAFS-Search.exe.config` beside it, and keep `target/release/fsearch.exe` and `LICENSE` in the project folder.
 
 ## Five pages

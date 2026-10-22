@@ -12,15 +12,16 @@ internal sealed class LiveMonitorPage : AppPage
     private readonly DecisionTimeline timeline = new DecisionTimeline();
     private RuntimeTelemetry previous;
     private DateTime? previousStart;
+    private int previousRun=-1;
     public LiveMonitorPage() : base("Adaptive Engine Monitor", "Observe filesystem workload and runtime scheduling behaviour.")
     {
         Theme.Row(Body, Theme.Flow(status), false); Theme.Row(Body, MetricCard.Row(elapsed, matches, strategy, workers), false);
-        var context = new SectionPanel("Current session — real application state"); workload.MaximumSize = new Size(1500, 0); Theme.Row(context, workload, false); Theme.Row(Body, context, false);
-        var planned = new SectionPanel("Filesystem workload — Awaiting RAFS instrumentation");
+        var context = new SectionPanel("Current session — real application state") {AutoSize=false,Height=130}; workload.MaximumSize = new Size(1500, 0); Theme.Row(context, workload, false); Theme.Row(Body, context, false);
+        var planned = new SectionPanel("Filesystem workload — measured during adaptive search") {AutoSize=false,Height=220};
         var metrics = new TableLayoutPanel { AutoSize = true, Dock = DockStyle.Fill, ColumnCount = 4 };
         metrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 32)); metrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18)); metrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 32)); metrics.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18));
         int i = 0;
-        foreach (string name in new[] { "Files Scanned", "Directories Scanned", "Throughput", "Pending Directories", "Current Depth", "Branching Factor", "Queue Capacity", "CPU Usage", "Memory Usage", "Disk I/O", "Tree Workload", "Max Depth" }) {
+        foreach (string name in new[] { "Files Scanned", "Directories Scanned", "Throughput", "Pending Directories", "Current Depth", "Branching Factor", "Queue Capacity", "CPU Usage (%)", "Memory (bytes)", "Process I/O (bytes/s)", "Tree Workload", "Max Depth" }) {
             var value = Theme.Label("--", true); value.Font = Theme.Mono(); values.Add(name, value);
             metrics.Controls.Add(Theme.Label(name), (i % 2) * 2, i / 2); metrics.Controls.Add(value, (i % 2) * 2 + 1, i / 2); i++;
         }
@@ -37,18 +38,20 @@ internal sealed class LiveMonitorPage : AppPage
         elapsed.Set(session.StartTime.HasValue ? session.Elapsed.TotalSeconds.ToString("0.0") + " s" : "--", "Application session elapsed");
         matches.Set(session.Report == null ? "--" : session.Report.Paths.Count.ToString(), session.Report == null ? "Available on completion" : "Reported by the search engine");
         var request = session.Progress != null && session.IsBusy ? session.Progress.Request : session.Request;
-        strategy.Set(request == null ? "--" : "Method " + request.Method, request == null ? "Manual mode" : request.Method == 1 ? "WalkDir + Rayon · configured" : "Recursive DFS · configured");
-        workers.Set(session.Telemetry != null && session.Telemetry.ActiveWorkers.HasValue ? session.Telemetry.ActiveWorkers.Value.ToString() : "--", request == null ? "Active worker telemetry planned" : "Configured: " + request.ThreadLabel);
-        workload.Text = request == null ? "No search has started. Adaptive mode is planned." : "Query: " + request.Pattern + "\nFolder: " + request.Folder + "\nConfigured depth: " + request.Depth + " · " + session.Operation + (session.Progress == null ? "" : " · Test " + session.Progress.Test + " of " + session.Progress.Tests + " · " + session.Progress.Phase);
-        if (session.StartTime != previousStart) { previousStart = session.StartTime; previous = null; throughput.Reset(); foreach (var item in values) item.Value.Text = "--"; }
+        strategy.Set(session.Telemetry!=null?session.Telemetry.CurrentTraversal:request==null?"--":request.MethodName, request==null?"No active request":request.MethodName);
+        workers.Set(session.Telemetry != null && session.Telemetry.ActiveWorkers.HasValue ? session.Telemetry.ActiveWorkers.Value.ToString() : "--", request == null ? "Adaptive workers reported live" : "Configured: " + request.ThreadLabel);
+        workload.Text = request == null ? "Select RAFS Adaptive on Search to see live workload counters." : "Query: " + request.Pattern + "\nFolder: " + request.Folder + "\nConfigured depth: " + request.Depth + " · " + session.Operation + (session.Progress == null ? "" : " · Test " + session.Progress.Test + " of " + session.Progress.Tests + " · " + session.Progress.Phase);
+        int run=session.Progress!=null&&session.Progress.Completed<session.Progress.Total?session.Progress.Completed:previousRun;
+        if (session.StartTime != previousStart || run!=previousRun) { previousStart = session.StartTime; previousRun=run;previous = null; throughput.Reset(); foreach (var item in values) item.Value.Text = "--"; }
         var data = session.Telemetry;
         if (data != null && data != previous) {
             previous = data; throughput.Add(data);
             Put("Files Scanned", data.FilesScanned); Put("Directories Scanned", data.DirectoriesScanned); Put("Throughput", data.Throughput);
             Put("Pending Directories", data.PendingDirectories); Put("Current Depth", data.CurrentDepth); Put("Branching Factor", data.BranchingFactor);
-            Put("Queue Capacity", data.QueueCapacity); Put("CPU Usage", data.CpuUsage); Put("Memory Usage", data.MemoryUsage); Put("Disk I/O", data.DiskIo); Put("Max Depth", data.MaxDepth);
+            Put("Queue Capacity", data.QueueCapacity); Put("CPU Usage (%)", data.CpuUsage); Put("Memory (bytes)", data.MemoryUsage); Put("Process I/O (bytes/s)", data.DiskIo); Put("Max Depth", data.MaxDepth);
+            Put("Tree Workload",data.Workload);
         }
         timeline.Present(session.Decisions);
     }
-    private void Put(string key, object value) { values[key].Text = value == null ? "--" : Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture); }
+    private void Put(string key, object value) { values[key].Text = value == null ? "--" : value is double ? ((double)value).ToString("0.0",System.Globalization.CultureInfo.InvariantCulture) : Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture); }
 }

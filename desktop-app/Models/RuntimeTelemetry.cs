@@ -1,5 +1,5 @@
 using System;
-// Contract for future backend instrumentation. BaselineCliBackend emits none.
+// Measured adaptive-engine events plus nullable OS process samples.
 internal sealed class RuntimeTelemetry
 {
     public DateTime Timestamp { get; set; }
@@ -16,6 +16,7 @@ internal sealed class RuntimeTelemetry
     public double? CpuUsage { get; set; }
     public double? DiskIo { get; set; }
     public string CurrentTraversal { get; set; }
+    public string Workload { get; set; }
 }
 internal sealed class AdaptiveDecision
 {

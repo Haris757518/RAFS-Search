@@ -10,17 +10,18 @@ internal sealed class Sidebar : TableLayoutPanel
     {
         Dock = DockStyle.Fill; ColumnCount = 1; BackColor = Theme.Background; Padding = new Padding(8, 14, 8, 10);
         var brand = Theme.Label("RAFS Search"); brand.Font = Theme.Ui(14, FontStyle.Bold); Theme.Row(this, brand, false);
-        Theme.Row(this, Theme.Label("v0.1 Engine", true), false);
-        foreach (string name in new[] { "Search", "Live Monitor", "Compare", "Benchmark Lab", "Settings" }) {
+        Theme.Row(this, Theme.Label("Adaptive Engine", true), false);
+        foreach (string name in new[] { "Search", "Live Monitor", "Compare", "Benchmark Lab", "Duplicates", "Settings" }) {
             var button = Theme.Button(name); button.TextAlign = ContentAlignment.MiddleLeft; button.Dock = DockStyle.Fill; button.Margin = new Padding(0, 2, 0, 2);
+            button.AccessibleName=name;button.AccessibleDescription="Open "+name+". Keyboard: Alt+"+(buttons.Count+1);
             button.Padding = new Padding(30, 3, 8, 3);
             button.Paint += delegate(object sender, PaintEventArgs e) { DrawIcon(e.Graphics, button, name); };
             button.Click += delegate { if (Navigate != null) Navigate(name); }; buttons.Add(name, button); Theme.Row(this, button, false);
         }
-        Theme.Row(this, new Panel(), true); Theme.Row(this, Theme.Label("RAFS v0.1", true), false);
+        Theme.Row(this, new Panel(), true); Theme.Row(this, Theme.Label("RAFS", true), false);
         Theme.Row(this, Theme.Label("OS Project", true), false);
     }
-    public void SelectPage(string page) { foreach (var item in buttons) { bool selected = item.Key == page; item.Value.BackColor = selected ? Theme.Surface : BackColor; item.Value.ForeColor = selected ? Theme.Accent : Theme.Text; item.Value.FlatAppearance.BorderColor = selected ? Theme.Border : BackColor; item.Value.FlatAppearance.MouseOverBackColor = Color.FromArgb(229, 238, 247); } }
+    public void SelectPage(string page) { foreach (var item in buttons) { bool selected = item.Key == page; item.Value.BackColor = selected ? Theme.Surface : BackColor; item.Value.ForeColor = selected ? Theme.Accent : Theme.Text; item.Value.FlatAppearance.BorderColor = selected ? Theme.Border : BackColor; item.Value.FlatAppearance.MouseOverBackColor = Theme.Dark?Color.FromArgb(48,57,68):Color.FromArgb(229, 238, 247); } }
     private static void DrawIcon(Graphics graphics, Button button, string name) {
         float scale = button.DeviceDpi / 96f, x = 8 * scale, y = (button.Height - 16 * scale) / 2f, size = 16 * scale;
         graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;

@@ -16,24 +16,47 @@ use std::path::Path;
 ///
 /// Any IO error is treated conservatively as "binary" so the file is skipped.
 pub fn is_binary(path: &Path, check_bytes: usize) -> bool {
-    let mut file = match File::open(path) {
-        Ok(f) => f,
-        Err(_) => return true,
-    };
+    match probe(path, check_bytes) {
+        Ok(value) => value,
+        Err(error) => {
+            crate::searcher::warn_io(path, &error);
+            true
+        }
+    }
+}
+
+fn probe(path: &Path, check_bytes: usize) -> std::io::Result<bool> {
+    let mut file = File::open(path)?;
 
     let mut buf = vec![0u8; check_bytes];
-    let n = match file.read(&mut buf) {
-        Ok(n) => n,
-        Err(_) => return true,
-    };
+    let n = file.read(&mut buf)?;
 
     let chunk = &buf[..n];
 
     // Null byte → almost certainly binary
     if chunk.contains(&0u8) {
-        return true;
+        return Ok(true);
     }
 
     // Non-UTF-8 sequence → treat as binary
-    std::str::from_utf8(chunk).is_err()
+    // A fixed-size probe can end inside a valid multi-byte character.
+    Ok(match std::str::from_utf8(chunk) {
+        Ok(_) => false,
+        Err(error) => error.error_len().is_some() || n < check_bytes,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn probe_boundary_does_not_reject_valid_utf8() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("unicode.txt");
+        std::fs::write(&path, "aα text").unwrap();
+        assert!(!super::is_binary(&path, 2));
+        std::fs::write(&path, [b'a', 0xce]).unwrap();
+        assert!(super::is_binary(&path, 3));
+        std::fs::write(&path, [b'a', 0xff, b'b']).unwrap();
+        assert!(super::is_binary(&path, 2));
+    }
 }

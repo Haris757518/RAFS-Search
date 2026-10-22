@@ -23,6 +23,7 @@ internal sealed class ComparePage : AppPage
         configs.Controls.Add(configA, 0, 0); configs.Controls.Add(configB, 1, 0); Theme.Row(input, configs, false);
         var useSearch = Theme.Button("Use Search settings"); useSearch.Click += delegate { try { var request = searchSettings(); options.SetRequest(request); depth.Value = request.Depth; } catch (Exception e) { status.Text = e.Message; } };
         Theme.Row(input, Theme.Flow(start, cancel, useSearch, export), false); Theme.Row(Body, input, false);
+        Theme.Row(input, Theme.Label("Windows Search Index queries pre-indexed files; it does not time the Explorer window. Unindexed files can cause a result mismatch.", true), false);
         Theme.Row(Body, view, true); status.MaximumSize = new System.Drawing.Size(1500, 0); Theme.Row(Body, status, false);
         start.Click += delegate {
             try { var plan = new BenchmarkPlan { Request = options.GetRequest(), Runs = (int)runs.Value, Warmups = (int)warmups.Value }; plan.Request.Depth = (int)depth.Value; plan.Configurations.Add(configA.GetConfiguration()); plan.Configurations.Add(configB.GetConfiguration()); view.Clear("Measuring..."); session.StartBenchmark(plan); }

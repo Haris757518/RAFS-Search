@@ -79,6 +79,10 @@ fn run_find(args: cli::FindArgs, cfg: &Config) {
     }
 
     let (context_before, context_after) = args.resolved_context();
+    if context_before > 1024 || context_after > 1024 {
+        printer.print_error("Context is limited to 1024 lines before/after a match.");
+        std::process::exit(2);
+    }
 
     let opts = SearchOptions {
         base_dirs: base_dirs.clone(),
@@ -122,20 +126,78 @@ fn run_find(args: cli::FindArgs, cfg: &Config) {
         }
     }
 
-    configure_rayon(cfg.threads);
+    if !matches!(args.method, SearchMethod::Adaptive) {
+        configure_rayon(cfg.threads);
+    }
     let interrupted = make_interrupt_flag();
     let start = Instant::now();
 
     let result = match args.method {
         SearchMethod::Walkdir => fast_find(&opts, Arc::clone(&interrupted)),
         SearchMethod::Recursive => recursive_find(&opts, Arc::clone(&interrupted)),
+        SearchMethod::Adaptive => {
+            let last_event =
+                std::sync::Mutex::new(Instant::now() - std::time::Duration::from_secs(1));
+            let max_workers = if args.max_workers == 0 {
+                std::thread::available_parallelism().map_or(1, usize::from)
+            } else {
+                args.max_workers
+            };
+            fsearch::adaptive::adaptive_find(
+                &opts,
+                Arc::clone(&interrupted),
+                max_workers,
+                &|event| {
+                    if !args.telemetry {
+                        return;
+                    }
+                    match event {
+                        fsearch::adaptive::Event::Telemetry(s) => {
+                            let mut last = last_event.lock().unwrap();
+                            if (s.pending > 0 || s.workers > 0)
+                                && last.elapsed() < std::time::Duration::from_millis(100)
+                            {
+                                return;
+                            }
+                            *last = Instant::now();
+                            eprintln!("RAFS|telemetry|files={}|dirs={}|pending={}|capacity={}|depth={}|max_depth={}|workers={}|branching={:.3}|elapsed_ms={:.3}|traversal={}",s.files,s.directories,s.pending,s.capacity,s.depth,s.max_depth,s.workers,s.branching,s.elapsed_ms,s.traversal);
+                        }
+                        fsearch::adaptive::Event::Decision {
+                            kind,
+                            old,
+                            new,
+                            reason,
+                        } => eprintln!(
+                            "RAFS|decision|kind={kind}|old={old}|new={new}|reason={reason}"
+                        ),
+                    }
+                },
+            )
+        }
     };
 
     let elapsed = start.elapsed();
     check_interrupted(&interrupted, &printer);
+    if args.report_events {
+        eprintln!(
+            "RAFS|timing|engine_ms={:.6}",
+            elapsed.as_secs_f64() * 1000.0
+        );
+    }
 
     match result {
         Ok(matches) => {
+            if args.report_events {
+                for item in &matches {
+                    let path = item.path().to_string_lossy();
+                    let mut encoded = String::with_capacity(path.len() * 2);
+                    for byte in path.as_bytes() {
+                        use std::fmt::Write;
+                        write!(&mut encoded, "{byte:02x}").expect("string write");
+                    }
+                    eprintln!("RAFS|path|utf8_hex={encoded}");
+                }
+            }
             printer.print_results(&matches, args.search_in_files, elapsed);
             if matches.is_empty() {
                 std::process::exit(1);

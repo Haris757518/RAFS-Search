@@ -4,7 +4,9 @@
 
 OS project by **Haris K ([Haris757518](https://github.com/Haris757518))**.
 
-The current implementation adds a Windows desktop demonstration and measured comparison graph around the original Rust fsearch engine. **Runtime-adaptive functionality is planned and has not yet been implemented.**
+The project includes the original Rust fsearch baselines, runtime-adaptive DFS/BFS scheduling and worker selection, live telemetry, measured comparison graphs, controlled workload generation and read-only duplicate discovery. See [PROJECT_STATUS.md](PROJECT_STATUS.md) for current behavior, verification and measurement limits.
+
+For the Windows installer/portable package and benchmark interpretation, see [PRODUCTION_GUIDE.md](PRODUCTION_GUIDE.md) and the [22 October validation](RELEASE_VALIDATION_2026-10-22.md). Build the ZIP with `desktop-app\package.ps1`, then Setup with `desktop-app\build-installer.ps1`.
 
 ## Run the desktop app
 
@@ -15,21 +17,21 @@ cargo build --release
 .\desktop-app\build.ps1
 ```
 
-The interface supports folder browsing, filename/content search, depth settings, original methods 1 and 2, fixed thread counts for method 1, cancellation, and CSV result export.
+The interface supports folder browsing, filename/text-content search, depth settings, five search strategies, cancellation, CSV export, live monitoring, benchmark generators, duplicate discovery, and a saved light/dark theme.
 
 ## Demonstrate the comparison graph
 
 1. Choose an existing folder with enough files to produce meaningful timings.
 2. Enter a filename pattern, for example `*.txt`, and choose depth and method-1 thread count.
-3. Click **Compare + graph**.
+3. Open **Compare**, choose configurations A/B, warm-ups and measured runs, then click **Run Comparison**.
 
-The chart compares sequential recursive search (original method 2) with parallel fsearch (original method 1) on the same workload. Each method receives one warm-up and five measured runs, with alternating order. Every run must return the same file paths before a chart is shown. Graph values are median total elapsed milliseconds, including process launch and output collection. Lower is better; either method may win.
+The chart supports original methods 1/2, RAFS Adaptive, live PowerShell traversal and the Windows Search index. Each configuration receives the selected warm-ups and measured runs, with rotating order. Every run must return the same normalized file paths before a chart is shown. Graph values are median total elapsed milliseconds including process launch, output collection and adaptive instrumentation overhead. Either method may win.
 
 ![Measured desktop comparison](desktop-app/comparison-preview.png)
 
 The screenshot shows a real small-fixture test; your results will depend on the folder and workload you choose.
 
-This is not a comparison against Windows Explorer, indexed search, or an adaptive engine. Cache state, background activity and process-launch overhead influence results. Filename/content matching settings are held constant. Content-result path sets are compared; matching line text is not compared by the benchmark.
+The index baseline queries the Windows Search database through a PowerShell host; it does not time the Explorer window. Unindexed/stale files cause a reported mismatch, and indexing settings are never changed automatically. Cache state, background activity and process overhead influence results. PowerShell/index baselines support filenames only. Content-result path sets are compared; matching line text is not compared by the benchmark. Adaptive policy decisions do not guarantee a speedup.
 
 ## Project ownership and upstream attribution
 

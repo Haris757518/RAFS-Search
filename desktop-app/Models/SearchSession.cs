@@ -22,6 +22,8 @@ internal sealed class SearchSession : IDisposable
     public SearchRequest Request { get; private set; }
     public SearchReport Report { get; private set; }
     public SearchReport LastSearchReport { get; private set; }
+    public SearchReport LastDuplicateReport { get; private set; }
+    public int DuplicateRevision { get; private set; }
     public DateTime? StartTime { get; private set; }
     public DateTime? EndTime { get; private set; }
     public RuntimeTelemetry Telemetry { get; private set; }
@@ -62,6 +64,7 @@ internal sealed class SearchSession : IDisposable
         LastSearchReport = null; SearchRevision++;
         Begin(request, "Search"); worker.RunWorkerAsync(request);
     }
+    public void StartDuplicates(SearchRequest request){if(IsBusy||worker.IsBusy)throw new InvalidOperationException("An operation is already running.");request=request.Copy();request.Validate();if(request.DuplicateMode==null)throw new ArgumentException("Duplicate mode is required.");LastDuplicateReport=null;DuplicateRevision++;Begin(request,"Duplicates");worker.RunWorkerAsync(request);}
     public void StartBenchmark(BenchmarkPlan plan)
     {
         // Snapshot all options; UI edits never change a running workload.
@@ -87,7 +90,7 @@ internal sealed class SearchSession : IDisposable
     }
     private void UpdateProgress(RunProgress current)
     {
-        context.Post(delegate(object ignored) { if (!disposed && IsBusy) { Progress = current; Notify(); } }, null);
+        context.Post(delegate(object ignored) { if (!disposed && IsBusy) { if(current.Completed<current.Total){Telemetry=null;Decisions.Clear();} Progress = current; Notify(); } }, null);
     }
     public void Cancel()
     {
@@ -110,8 +113,8 @@ internal sealed class SearchSession : IDisposable
         else if (e.Error != null) { State = SessionState.Failed; Message = e.Error.Message; }
         else {
             var benchmark = e.Result as BenchmarkResult;
-            if (benchmark != null) { Report = benchmark.Matches; History.Add(benchmark); if (benchmark.Plan.Lab) LabResult = benchmark; else Comparison = benchmark; }
-            else { Report = (SearchReport)e.Result; LastSearchReport = Report; SearchRevision++; }
+            if (benchmark != null) { Report = benchmark.Matches; History.Add(benchmark);if(History.Count>20)History.RemoveAt(0); if (benchmark.Plan.Lab) LabResult = benchmark; else Comparison = benchmark; }
+            else { Report = (SearchReport)e.Result; if(Operation=="Duplicates"){LastDuplicateReport=Report;DuplicateRevision++;}else{LastSearchReport = Report; SearchRevision++;} }
             if (Report.Succeeded) { State = SessionState.Completed; Message = Report.Paths.Count == 0 ? "No matches found" : "Completed"; }
             else { State = SessionState.Failed; Message = String.IsNullOrWhiteSpace(Report.Error) ? "The search engine returned exit code " + Report.ExitCode + "." : Report.Error.Trim(); }
         }
