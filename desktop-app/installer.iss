@@ -11,7 +11,7 @@
 [Setup]
 AppId={{A942A197-D009-4938-84C9-26EB27AF7BD8}
 AppName=RAFS Search
-AppVersion=1.0.0
+AppVersion=1.1.0
 AppPublisher=Haris K
 DefaultDirName={localappdata}\Programs\RAFS-Search
 DefaultGroupName=RAFS Search

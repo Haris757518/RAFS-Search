@@ -9,6 +9,7 @@ internal sealed class SearchRequest
     public int TimeoutSeconds = 300;
     public string DuplicateMode;
     public bool Content, CaseSensitive;
+    public bool LegacyAdaptive;
     public SearchRequest Copy() { return (SearchRequest)MemberwiseClone(); }
     public string MethodName { get { return Method == 5 ? "RAFS Adaptive" : Method == 4 ? "Windows Search Index (Explorer backend)" : Method == 3 ? "Traditional PowerShell Search" : Method == 1 ? "Method 1 — WalkDir + Rayon" : "Method 2 — Recursive DFS"; } }
     public string ThreadLabel { get { return Method == 5 ? "Adaptive, cap " + MaximumWorkers : Method == 4 ? "Windows index service" : Method != 1 ? "1 · sequential" : Threads == 0 ? "Automatic" : Threads.ToString(); } }

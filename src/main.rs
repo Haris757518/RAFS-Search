@@ -1,5 +1,5 @@
 // File: src\main.rs
-// Author: Haris K <242903453+Haris757518@users.noreply.github.com>
+// Original author: Hadi Cahyadi <cumulus13@gmail.com>
 // Date: 2026-05-10
 // Description:
 // License: MIT
@@ -14,7 +14,7 @@ use fsearch::duplicates::{DuplicateMode, DuplicateOptions, HashAlgorithm};
 use fsearch::output::Printer;
 use fsearch::searcher::{fast_find, parse_patterns, recursive_find, SearchOptions};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -126,7 +126,10 @@ fn run_find(args: cli::FindArgs, cfg: &Config) {
         }
     }
 
-    if !matches!(args.method, SearchMethod::Adaptive) {
+    if !matches!(
+        args.method,
+        SearchMethod::Adaptive | SearchMethod::LegacyAdaptive
+    ) {
         configure_rayon(cfg.threads);
     }
     let interrupted = make_interrupt_flag();
@@ -135,27 +138,33 @@ fn run_find(args: cli::FindArgs, cfg: &Config) {
     let result = match args.method {
         SearchMethod::Walkdir => fast_find(&opts, Arc::clone(&interrupted)),
         SearchMethod::Recursive => recursive_find(&opts, Arc::clone(&interrupted)),
-        SearchMethod::Adaptive => {
+        SearchMethod::Adaptive | SearchMethod::LegacyAdaptive => {
             let last_event =
                 std::sync::Mutex::new(Instant::now() - std::time::Duration::from_secs(1));
+            let reported_peak = AtomicUsize::new(0);
             let max_workers = if args.max_workers == 0 {
                 std::thread::available_parallelism().map_or(1, usize::from)
             } else {
                 args.max_workers
             };
-            fsearch::adaptive::adaptive_find(
-                &opts,
-                Arc::clone(&interrupted),
-                max_workers,
-                &|event| {
-                    if !args.telemetry {
-                        return;
-                    }
-                    match event {
+            let search = if matches!(args.method, SearchMethod::LegacyAdaptive) {
+                fsearch::adaptive_legacy::adaptive_find
+            } else {
+                fsearch::adaptive::adaptive_find
+            };
+            search(&opts, Arc::clone(&interrupted), max_workers, &|event| {
+                if !args.telemetry {
+                    return;
+                }
+                match event {
+                        fsearch::adaptive::Event::Policy {kind,old,new,reason,workers,elapsed_ms} => eprintln!("RAFS|decision|kind={kind}|old={old}|new={new}|reason={reason}; workers={workers}; t={elapsed_ms:.3}ms"),
+                        fsearch::adaptive::Event::Overhead {sampling_ms,decision_ms,pool_ms,scheduling_ms} => eprintln!("RAFS|overhead|sample_ms={sampling_ms:.6}|decision_ms={decision_ms:.6}|pool_ms={pool_ms:.6}|scheduling_ms={scheduling_ms:.6}"),
                         fsearch::adaptive::Event::Telemetry(s) => {
+                            let new_peak=s.workers>reported_peak.fetch_max(s.workers,Ordering::Relaxed);
                             let mut last = last_event.lock().unwrap();
                             if (s.pending > 0 || s.workers > 0)
                                 && last.elapsed() < std::time::Duration::from_millis(100)
+                                && !new_peak
                             {
                                 return;
                             }
@@ -171,8 +180,7 @@ fn run_find(args: cli::FindArgs, cfg: &Config) {
                             "RAFS|decision|kind={kind}|old={old}|new={new}|reason={reason}"
                         ),
                     }
-                },
-            )
+            })
         }
     };
 

@@ -1,5 +1,5 @@
 // File: src\searcher.rs
-// Author: Haris K <242903453+Haris757518@users.noreply.github.com>
+// Original author: Hadi Cahyadi <cumulus13@gmail.com>
 // Date: 2026-05-11
 // Description:
 // License: MIT
@@ -489,6 +489,21 @@ pub(crate) fn validate_dirs(dirs: &[PathBuf]) -> FsearchResult<()> {
 
 // ── Method 1 — walkdir + rayon (parallel, multi-root) ────────────────────────
 
+/// Internal optional instrumentation; original public baselines pay no atomic-counter cost.
+pub(crate) trait SearchObserver: Sync {
+    fn directory(&self, depth: u32);
+    fn file_begin(&self, depth: u32);
+    fn file_end(&self);
+}
+struct FileActivity<'a>(Option<&'a dyn SearchObserver>);
+impl Drop for FileActivity<'_> {
+    fn drop(&mut self) {
+        if let Some(observer) = self.0 {
+            observer.file_end();
+        }
+    }
+}
+
 /// Search using `walkdir` + `rayon` across **one or more directories**.
 ///
 /// All roots are walked in parallel; results are merged and de-duplicated
@@ -496,6 +511,13 @@ pub(crate) fn validate_dirs(dirs: &[PathBuf]) -> FsearchResult<()> {
 pub fn fast_find(
     opts: &SearchOptions,
     interrupted: Arc<AtomicBool>,
+) -> FsearchResult<Vec<SearchMatch>> {
+    fast_find_observed(opts, interrupted, None)
+}
+pub(crate) fn fast_find_observed(
+    opts: &SearchOptions,
+    interrupted: Arc<AtomicBool>,
+    observer: Option<&dyn SearchObserver>,
 ) -> FsearchResult<Vec<SearchMatch>> {
     validate_dirs(&opts.base_dirs)?;
 
@@ -507,6 +529,9 @@ pub fn fast_find(
         .base_dirs
         .par_iter()
         .flat_map(|base| {
+            if let Some(observer) = observer {
+                observer.directory(0);
+            }
             if interrupted.load(Ordering::Relaxed) {
                 return vec![];
             }
@@ -541,6 +566,19 @@ pub fn fast_find(
                     }
 
                     let is_dir = entry.file_type().is_dir();
+                    if entry.file_type().is_symlink() || (!is_dir && !entry.file_type().is_file()) {
+                        return None;
+                    }
+                    if let Some(observer) = observer {
+                        if is_dir {
+                            if entry.depth() <= opts.max_depth as usize {
+                                observer.directory(entry.depth() as u32);
+                            }
+                        } else {
+                            observer.file_begin(entry.depth().saturating_sub(1) as u32);
+                        }
+                    }
+                    let _activity = FileActivity(if is_dir { None } else { observer });
                     let name = entry.file_name().to_string_lossy().to_string();
                     let path = entry.path().to_path_buf();
 
@@ -562,15 +600,19 @@ pub fn fast_find(
                         if is_dir {
                             return None;
                         }
-                        let lines = search_in_file(
-                            &path,
-                            &opts.pattern,
-                            opts.case_insensitive,
-                            opts.max_line_length,
-                            opts.binary_check_bytes,
-                            opts.context_before,
-                            opts.context_after,
-                        );
+                        let lines = if observer.is_some() {
+                            search_in_file_cancellable(&path, opts, &interrupted)
+                        } else {
+                            search_in_file(
+                                &path,
+                                &opts.pattern,
+                                opts.case_insensitive,
+                                opts.max_line_length,
+                                opts.binary_check_bytes,
+                                opts.context_before,
+                                opts.context_after,
+                            )
+                        };
                         if lines.is_empty() {
                             None
                         } else {
@@ -607,6 +649,13 @@ pub fn recursive_find(
     opts: &SearchOptions,
     interrupted: Arc<AtomicBool>,
 ) -> FsearchResult<Vec<SearchMatch>> {
+    recursive_find_observed(opts, interrupted, None)
+}
+pub(crate) fn recursive_find_observed(
+    opts: &SearchOptions,
+    interrupted: Arc<AtomicBool>,
+    observer: Option<&dyn SearchObserver>,
+) -> FsearchResult<Vec<SearchMatch>> {
     validate_dirs(&opts.base_dirs)?;
 
     let mut seen: HashSet<PathBuf> = HashSet::new();
@@ -616,7 +665,15 @@ pub fn recursive_find(
         if interrupted.load(Ordering::Relaxed) {
             break;
         }
-        walk_dir(base, opts, 0, &mut matches, &mut seen, &interrupted);
+        walk_dir(
+            base,
+            opts,
+            0,
+            &mut matches,
+            &mut seen,
+            &interrupted,
+            observer,
+        );
     }
 
     matches.sort_unstable_by(|a, b| a.path().cmp(b.path()));
@@ -630,9 +687,13 @@ fn walk_dir(
     matches: &mut Vec<SearchMatch>,
     seen: &mut HashSet<PathBuf>,
     interrupted: &AtomicBool,
+    observer: Option<&dyn SearchObserver>,
 ) {
     if depth > opts.max_depth || interrupted.load(Ordering::Relaxed) {
         return;
+    }
+    if let Some(observer) = observer {
+        observer.directory(depth);
     }
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,
@@ -679,21 +740,29 @@ fn walk_dir(
             {
                 matches.push(SearchMatch::Path(path.clone()));
             }
-            walk_dir(&path, opts, depth + 1, matches, seen, interrupted);
+            walk_dir(&path, opts, depth + 1, matches, seen, interrupted, observer);
         } else if file_type.is_file() {
+            if let Some(observer) = observer {
+                observer.file_begin(depth);
+            }
+            let _activity = FileActivity(observer);
             if !matches_include(&name, &opts.include_patterns, opts.case_insensitive) {
                 continue;
             }
             if opts.search_in_files {
-                let lines = search_in_file(
-                    &path,
-                    &opts.pattern,
-                    opts.case_insensitive,
-                    opts.max_line_length,
-                    opts.binary_check_bytes,
-                    opts.context_before,
-                    opts.context_after,
-                );
+                let lines = if observer.is_some() {
+                    search_in_file_cancellable(&path, opts, interrupted)
+                } else {
+                    search_in_file(
+                        &path,
+                        &opts.pattern,
+                        opts.case_insensitive,
+                        opts.max_line_length,
+                        opts.binary_check_bytes,
+                        opts.context_before,
+                        opts.context_after,
+                    )
+                };
                 if !lines.is_empty() {
                     matches.push(SearchMatch::Content { path, lines });
                 }

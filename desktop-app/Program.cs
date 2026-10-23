@@ -3,7 +3,7 @@ using System.Windows.Forms;
 [assembly: System.Runtime.Versioning.TargetFramework(".NETFramework,Version=v4.8", FrameworkDisplayName = ".NET Framework 4.8")]
 [assembly: System.Reflection.AssemblyTitle("RAFS Search")]
 [assembly: System.Reflection.AssemblyCompany("Haris K")]
-[assembly: System.Reflection.AssemblyVersion("1.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.1.0.0")]
 internal static class Program
 {
     [STAThread]
@@ -21,6 +21,7 @@ internal static class Program
             if(args.Length>0 && args[0]=="--production-test")return ProductionVerification.Run();
             if(args.Length>0 && args[0]=="--layout-test")return ReleaseUiVerification.Run();
             if(args.Length>0 && args[0]=="--soak-test")return SoakVerification.Run();
+            if(args.Length>0 && args[0]=="--research-benchmark")return ResearchBenchmark.Run();
             if(args.Length>0 && args[0]=="--benchmark-release")return ProductionVerification.Benchmark();
             if(args.Length>0 && args[0]=="--feature-test"){FeatureVerification.Run(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"target","feature-verification"),false);return 0;}
             Application.Run(new AppShell()); return 0;

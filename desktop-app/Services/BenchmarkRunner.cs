@@ -25,6 +25,7 @@ internal sealed class BenchmarkRunner
                 var measurement = result.Measurements[index];
                 var request = plan.Request.Copy();
                 request.Method = measurement.Configuration.Method;
+                request.LegacyAdaptive=measurement.Configuration.LegacyAdaptive;
                 request.Threads = request.Method != 1 ? 1 : measurement.Configuration.Threads;
                 if(request.Method==5 && measurement.Configuration.Threads>0)request.MaximumWorkers=measurement.Configuration.Threads;
                 progress(new RunProgress { Phase = round < 0 ? "Warm-up " + (round + plan.Warmups + 1) + " of " + plan.Warmups : "Run " + (round + 1) + " of " + plan.Runs, Request = request, Completed = completed, Total = total, Test = index + 1, Tests = plan.Configurations.Count });

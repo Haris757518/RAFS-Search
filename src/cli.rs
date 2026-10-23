@@ -1,5 +1,5 @@
 // File: src\cli.rs
-// Author: Haris K <242903453+Haris757518@users.noreply.github.com>
+// Original author: Hadi Cahyadi <cumulus13@gmail.com>
 // Date: 2026-05-11
 // Description:
 // License: MIT
@@ -26,7 +26,7 @@ use clap_color_help::default_styles;
     \n  fsearch dup   [PATHS…]             Find duplicate files\
     \n  fsearch config                     Config helpers\
     \n\nRun `fsearch <SUBCOMMAND> --help` for full option details.",
-    author = "Haris K <242903453+Haris757518@users.noreply.github.com>"
+    author = "Hadi Cahyadi (fsearch); Haris K (RAFS extensions)"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -85,8 +85,8 @@ pub struct FindArgs {
     #[arg(short = 'p', long = "path", value_name = "PATH", action = ArgAction::Append)]
     pub path_flags: Vec<String>,
 
-    /// Search method: 1 = walkdir+rayon, 2 = recursive, 3 = adaptive
-    #[arg(short = 'm', long, value_name = "1|2|3", default_value = "1")]
+    /// Search method: 1 = walkdir+rayon, 2 = recursive, 3 = hybrid, 4 = October-22 adaptive baseline
+    #[arg(short = 'm', long, value_name = "1|2|3|4", default_value = "1")]
     pub method: SearchMethod,
     /// Maximum adaptive workers (0 = available logical CPUs)
     #[arg(long, default_value = "0")]
@@ -207,6 +207,8 @@ pub enum SearchMethod {
     Recursive = 2,
     #[value(name = "3")]
     Adaptive = 3,
+    #[value(name = "4")]
+    LegacyAdaptive = 4,
 }
 
 // ── dup ───────────────────────────────────────────────────────────────────────

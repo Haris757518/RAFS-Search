@@ -5,7 +5,8 @@ using System.Linq;
 internal sealed class RunConfiguration
 {
     public int Method, Threads;
-    public string Name { get { return Method == 5 ? "RAFS Adaptive / " + (Threads==0?"settings cap":Threads.ToString()+" max workers") : Method == 4 ? "Windows Search Index (Explorer backend)" : Method == 3 ? "Traditional PowerShell Search" : Method == 2 ? "Original fsearch Method 2 / sequential" : "Original fsearch Method 1 / " + (Threads == 0 ? "automatic" : Threads.ToString()) + " threads"; } }
+    public bool LegacyAdaptive=false;
+    public string Name { get { return Method == 5 ? (LegacyAdaptive?"RAFS October 22 adaptive / ":"RAFS Hybrid / ") + (Threads==0?"settings cap":Threads.ToString()+" max workers") : Method == 4 ? "Windows Search Index (Explorer backend)" : Method == 3 ? "Traditional PowerShell Search" : Method == 2 ? "Original fsearch Method 2 / sequential" : "Original fsearch Method 1 / " + (Threads == 0 ? "automatic" : Threads.ToString()) + " threads"; } }
 }
 internal sealed class BenchmarkPlan
 {

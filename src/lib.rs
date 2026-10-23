@@ -48,6 +48,7 @@
 //! ```
 
 pub mod adaptive;
+pub mod adaptive_legacy;
 pub mod binary;
 pub mod colors;
 pub mod config;

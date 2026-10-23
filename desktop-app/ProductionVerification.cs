@@ -24,6 +24,8 @@ internal static class ProductionVerification
         foreach(int method in new[]{1,2,3,5}){
             var report=backend.Run(new SearchRequest{Folder=fixture,Pattern="*.txt",Method=method,Depth=5},p=>{},()=>false);
             Check(report.Succeeded&&report.Paths.Count==2&&report.EngineMilliseconds.HasValue,"Filename or timing protocol failed: "+method);
+            Check(report.CpuMilliseconds.HasValue&&report.SampledPeakWorkingSetBytes.HasValue&&report.SampledPeakWorkingSetBytes.Value>0,"CPU/memory sampling unavailable: "+method);
+            if(method==5)Check(report.SamplingMilliseconds.HasValue&&report.DecisionMilliseconds.HasValue&&!String.IsNullOrEmpty(report.SelectedStrategy),"Hybrid strategy/overhead event missing.");
             report=backend.Run(new SearchRequest{Folder=fixture,Pattern="*.txt",Method=method,Depth=0},p=>{},()=>false);
             Check(report.Succeeded&&report.Paths.Count==1,"Depth semantics failed: "+method);
         }

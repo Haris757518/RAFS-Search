@@ -7,6 +7,10 @@ internal sealed class SearchReport
     public int ExitCode;
     public double TotalMilliseconds;
     public double? EngineMilliseconds;
+    public double? CpuMilliseconds,SamplingMilliseconds,DecisionMilliseconds,PoolMilliseconds,SchedulingMilliseconds;
+    public long? SampledPeakWorkingSetBytes;
+    public double ResourceSamplingMilliseconds;
+    public string SelectedStrategy="";
     public bool Incomplete;
     public readonly List<string> Paths = new List<string>();
     public bool Succeeded { get { return !Incomplete && (ExitCode == 0 || (ExitCode == 1 && Paths.Count == 0 && String.IsNullOrWhiteSpace(Error) && Output.Contains("No results found."))); } }

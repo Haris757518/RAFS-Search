@@ -48,7 +48,7 @@ internal static class SearchRunner
         Directory.CreateDirectory(scratch);
         try {
             File.WriteAllText(Path.Combine(scratch, "fsearch.toml"), "threads = " + request.Threads + "\n", new UTF8Encoding(false));
-            string args = "find " + Quote(request.Pattern) + " -p " + Quote(request.Folder) + " -d " + request.Depth + " -m " + (request.Method==5?3:request.Method) + " -D" +
+            string args = "find " + Quote(request.Pattern) + " -p " + Quote(request.Folder) + " -d " + request.Depth + " -m " + (request.Method==5?(request.LegacyAdaptive?4:3):request.Method) + " -D" +
                 (request.Content ? " -f" : "") + (request.CaseSensitive ? " -C" : "") + " --report-events" + (request.Method == 5 ? " --max-workers " + request.MaximumWorkers + " --telemetry" : "");
             if(request.DuplicateMode!=null)args="dup -p "+Quote(request.Folder)+" -d "+request.Depth+" --mode "+request.DuplicateMode+" -i "+Quote(request.Pattern);
             var info = new ProcessStartInfo(Binary, args) {
@@ -61,6 +61,7 @@ internal static class SearchRunner
             info.EnvironmentVariables.Remove("RAYON_NUM_THREADS");
             var output = new StringBuilder(); var errors = new StringBuilder();
             var paths=new System.Collections.Generic.List<string>(); bool truncated=false,incomplete=false; double? engine=null;
+            var metrics=new System.Collections.Generic.Dictionary<string,double>();string selected="";
             var report=ProcessExecution.Run(info,processChanged,cancelled,
                 delegate(string line) {
                     if(output.Length+line.Length<2*1024*1024)output.AppendLine(line);else truncated=true;
@@ -75,12 +76,23 @@ internal static class SearchRunner
                         paths.Add(new UTF8Encoding(false,true).GetString(bytes));
                     } else if(line.StartsWith(timingPrefix,StringComparison.Ordinal)) {
                         double value;if(!Double.TryParse(line.Substring(timingPrefix.Length),System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out value)||Double.IsNaN(value)||Double.IsInfinity(value)||value<0)throw new FormatException("Invalid engine timing.");engine=value;
+                    } else if(line.StartsWith("RAFS|overhead|",StringComparison.Ordinal)){
+                        foreach(string field in line.Split('|')){int separator=field.IndexOf('=');if(separator>0){double value;if(!Double.TryParse(field.Substring(separator+1),System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out value)||Double.IsNaN(value)||Double.IsInfinity(value)||value<0)throw new FormatException("Invalid policy overhead.");metrics[field.Substring(0,separator)]=value;}}
+                        if(eventReceived!=null)eventReceived(line);
                     } else if(line.StartsWith("RAFS|warning|",StringComparison.Ordinal)){incomplete=true;if(errors.Length<256*1024)errors.AppendLine(line.Substring(13));}
-                    else if(line.StartsWith("RAFS|",StringComparison.Ordinal)) {if(eventReceived!=null)eventReceived(line);}
+                    else if(line.StartsWith("RAFS|",StringComparison.Ordinal)) {
+                        if(line.StartsWith("RAFS|decision|kind=Strategy|",StringComparison.Ordinal)){int a=line.IndexOf("|new=",StringComparison.Ordinal);int b=line.IndexOf("|reason=",StringComparison.Ordinal);if(a>=0&&b>a)selected=line.Substring(a+5,b-a-5);}
+                        if(eventReceived!=null)eventReceived(line);
+                    }
                     else if(errors.Length<256*1024)errors.AppendLine(line);
                 },request.TimeoutSeconds);
             if(truncated)output.AppendLine("[Raw output preview limited to 2,097,152 characters. All result paths are retained in Results / CSV.]");
             report.Output=output.ToString();report.Error=(incomplete?"Search incomplete: some entries could not be read.\r\n":"")+errors.ToString();report.Paths.AddRange(paths);report.EngineMilliseconds=engine;report.Incomplete=incomplete;
+            report.SelectedStrategy=selected;
+            if(metrics.ContainsKey("sample_ms"))report.SamplingMilliseconds=metrics["sample_ms"];
+            if(metrics.ContainsKey("decision_ms"))report.DecisionMilliseconds=metrics["decision_ms"];
+            if(metrics.ContainsKey("pool_ms"))report.PoolMilliseconds=metrics["pool_ms"];
+            if(metrics.ContainsKey("scheduling_ms"))report.SchedulingMilliseconds=metrics["scheduling_ms"];
             Match timing=Regex.Match(report.Output,@"\[(\d+)ms\]");
             report.EngineTime=engine.HasValue?engine.Value.ToString("0.000",System.Globalization.CultureInfo.InvariantCulture)+" ms":timing.Success?timing.Groups[1].Value+" ms":"--";
             return report;
