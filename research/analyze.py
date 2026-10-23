@@ -1,6 +1,7 @@
 """Validate and plot the frozen experiment. Usage: python research/analyze.py INPUT OUTPUT."""
 import csv
 import json
+import re
 from pathlib import Path
 import sys
 
@@ -11,6 +12,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FixedLocator, FuncFormatter, NullFormatter
 
 source, output = map(Path, sys.argv[1:3])
 output.mkdir(parents=True, exist_ok=True)
@@ -75,9 +77,16 @@ for ax, dataset in zip(axes.flat, datasets):
     records = {r['Configuration']:r for r in summary if r['Dataset'] == dataset}
     names = [n for n in order if n in records]
     values = [records[n]['MedianMs'] for n in names]
-    ax.barh([labels[order.index(n)] for n in names], values,
-            color=['#008c87' if n == 'Hybrid adaptive' else '#697c95' for n in names])
-    ax.set_xscale('log'); ax.set_xlabel('Median process elapsed time (ms; log scale)'); ax.set_title(dataset)
+    for position, name in enumerate(names):
+        record=records[name]; median=record['MedianMs']
+        ax.errorbar(median,position,xerr=[[median-record['MinMs']],[record['MaxMs']-median]],
+                    fmt='o',capsize=3,color='#008c87' if name=='Hybrid adaptive' else '#697c95')
+    ax.set_yticks(range(len(names)),[labels[order.index(n)] for n in names])
+    ax.set_xscale('log')
+    ticks=np.geomspace(min(records[n]['MinMs'] for n in names)*.9,max(records[n]['MaxMs'] for n in names)*1.1,4)
+    ax.xaxis.set_major_locator(FixedLocator(ticks));ax.xaxis.set_major_formatter(FuncFormatter(lambda value,pos:f'{value:.0f}'))
+    ax.xaxis.set_minor_formatter(NullFormatter())
+    ax.set_xlabel('Process elapsed ms (log scale); median and min–max'); ax.set_title(dataset)
 fig.suptitle('Identical queries: 3 warmups + 10 measured process runs per configuration'); fig.tight_layout()
 save(fig, 'algorithm-comparison')
 fig, ax = plt.subplots(figsize=(10, 5))
@@ -109,7 +118,13 @@ with (source/'decisions.csv').open(encoding='utf-8-sig',newline='') as f: decisi
 fig, axes=plt.subplots(1,3,figsize=(15,4))
 for ax,dataset in zip(axes,['Deep-20000','Wide-20000','Mixed-20000']):
     traces=[r for r in telemetry if r['Dataset']==dataset and r['Configuration']=='Hybrid adaptive' and r['Warmup'].lower()=='false' and r['Round']=='1']
-    ax.step([float(r['EngineElapsedMs']) for r in traces],[int(r['ActiveWorkers']) for r in traces],where='post',label='Observed active tasks')
+    ax.scatter([float(r['EngineElapsedMs']) for r in traces],[int(r['ActiveWorkers']) for r in traces],s=20,label='Observed active tasks')
+    changes=[r for r in decisions if r['Dataset']==dataset and r['Configuration']=='Hybrid adaptive' and r['Warmup'].lower()=='false' and r['Round']=='1' and r['Event']=='Workers']
+    times=[float(re.search(r't=([0-9.]+)ms',r['Reason']).group(1)) for r in changes]
+    budgets=[int(r['New']) for r in changes]
+    if traces:
+        times.append(max(float(r['EngineElapsedMs']) for r in traces));budgets.append(budgets[-1])
+    ax.step(times,budgets,where='post',label='Selected worker budget',color='#008c87',alpha=.7)
     ax.set_title(dataset);ax.set_xlabel('Engine elapsed ms');ax.set_ylabel('Active workers');ax.set_ylim(0,9);ax.legend(fontsize=7)
 fig.suptitle('Observed worker events, measured round 1 (event samples, not continuous utilization)');fig.tight_layout();save(fig,'runtime-workers')
 audit=dict(invocations=len(rows), measured=sum(r['Warmup'].lower()=='false' for r in rows),

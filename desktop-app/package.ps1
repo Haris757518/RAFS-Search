@@ -14,6 +14,7 @@ try {
     & "$PSScriptRoot\build.ps1" -OutputDirectory $packageDirectory
     Copy-Item -LiteralPath (Join-Path $projectRoot 'target\release\fsearch.exe') -Destination (Join-Path $packageDirectory 'engine\fsearch.exe')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'LICENSE') -Destination $packageDirectory
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'AUTHORS.md') -Destination $packageDirectory
     Copy-Item -LiteralPath (Join-Path $projectRoot 'PRODUCTION_GUIDE.md') -Destination (Join-Path $packageDirectory 'README.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'demo-data') -Destination $packageDirectory -Recurse
     if($CertificateThumbprint){

@@ -1,4 +1,6 @@
-# RAFS Search 1.0 — Windows release
+# RAFS Search 1.1 — Windows release
+
+RAFS Adaptive now profiles a bounded sample and selects sequential DFS, fixed WalkDir + Rayon or dynamic DFS/BFS. The existing Live Monitor explains selections, worker/traversal changes and measured overhead. See the [research report](https://github.com/Haris757518/RAFS-Search/blob/rafs-development/research/REPORT.md) for the full comparison against fixed 1/2/4/8, the old adaptive baseline and PowerShell. Flat and tiny-folder losses are disclosed; adaptive does not promise the minimum time on every query.
 
 Extract the entire ZIP, then open `RAFS-Search.exe`. Keep the `engine` directory beside it. Windows x64 and .NET Framework 4.8 are required. The supplied engine is x64; the desktop host is AnyCPU. No Rust toolchain is needed to use the package.
 
@@ -10,7 +12,7 @@ Settings, temporary search configuration, diagnostics and generated benchmark da
 
 - Method 1: original WalkDir/Rayon parallel traversal; configurable threads.
 - Method 2: original recursive sequential traversal.
-- RAFS Adaptive: bounded worker pool; adjusts traversal order and concurrent batches from the observed directory frontier. The worker cap is a maximum, not a promise that every worker will be busy.
+- RAFS Adaptive: selects a sequential, fixed-parallel or dynamic engine after bounded profiling. Dynamic mode adjusts traversal order and concurrent batches from observed workload and feedback. The worker cap is a maximum, not a promise that every worker will be busy.
 - Traditional PowerShell: live filename traversal using Windows PowerShell without profiles.
 - Windows Search Index: queries the same indexing service used by Explorer. It does not measure the Explorer window. Unindexed folders, stale entries and service availability can change results. Index settings are never modified automatically.
 
@@ -36,7 +38,7 @@ The package includes a source-independent verification mode: `RAFS-Search.exe --
 
 From the repository: run `cargo test`, `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings`, and `desktop-app\package.ps1`. Run `desktop-app\verify-release.ps1` for production, feature, layout/accessibility and one-minute repeated-search checks. To build Setup, run `desktop-app\bootstrap-installer-tools.ps1` once, then `desktop-app\build-installer.ps1`. The compiler download is pinned and requires a valid publisher signature. `desktop-app\verify-installer.ps1` checks clean install, production checks, upgrade and uninstall in a fresh project test directory; it refuses to overwrite an existing RAFS installation registration.
 
-The Windows CI matrix covers Windows Server 2022 and 2025 hosts, and Rust CI covers Linux, macOS and Windows. It packages and verifies the application and installer, and retains logs/screenshots. These hosted server tests do not claim client Windows 10/11 field coverage. CI has not been run remotely until these changes are published.
+The Windows CI matrix covers Windows Server 2022 and 2025 hosts, and Rust CI covers Linux, macOS and Windows. It packages and verifies the application and installer, and retains logs/screenshots. These hosted server tests do not claim client Windows 10/11 field coverage. The frozen hybrid implementation passed all 11 jobs in GitHub CI run 39901578724; current branch checks are visible on the pull request.
 
 Signing: pass `-CertificateThumbprint` and `-TimestampServer` to `package.ps1` to sign the app and engine before ZIP creation; pass the same options to `build-installer.ps1` for the installer. Scripts reject missing private keys, expired certificates, wrong key usage and invalid signatures. Rebuild/checksum artifacts after signing. Certificates and private keys are never included in the ZIP or repository.
 

@@ -37,6 +37,7 @@ Source: "{#PackageDir}\RAFS-Search.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDir}\RAFS-Search.exe.config"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDir}\engine\fsearch.exe"; DestDir: "{app}\engine"; Flags: ignoreversion
 Source: "{#PackageDir}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PackageDir}\AUTHORS.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDir}\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PackageDir}\demo-data\*"; DestDir: "{app}\demo-data"; Flags: ignoreversion recursesubdirs createallsubdirs
 

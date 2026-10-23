@@ -4,9 +4,9 @@
 
 OS project by **Haris K ([Haris757518](https://github.com/Haris757518))**.
 
-The project includes the original Rust fsearch baselines, runtime-adaptive DFS/BFS scheduling and worker selection, live telemetry, measured comparison graphs, controlled workload generation and read-only duplicate discovery. See [PROJECT_STATUS.md](PROJECT_STATUS.md) for current behavior, verification and measurement limits.
+The project extends Hadi Cahyadi's Rust fsearch engines with bounded hybrid selection between sequential DFS, WalkDir + Rayon and dynamic DFS/BFS, concurrency feedback, live telemetry and correctness-checked comparisons. See the [hybrid research report](research/REPORT.md) for 923 experimental invocations, fastest-fixed comparisons, graphs and measured limitations, and [PROJECT_STATUS.md](PROJECT_STATUS.md) for current behavior.
 
-For the Windows installer/portable package and benchmark interpretation, see [PRODUCTION_GUIDE.md](PRODUCTION_GUIDE.md) and the [22 October validation](RELEASE_VALIDATION_2026-10-22.md). Build the ZIP with `desktop-app\package.ps1`, then Setup with `desktop-app\build-installer.ps1`.
+For the Windows 1.1 installer/portable package, see [PRODUCTION_GUIDE.md](PRODUCTION_GUIDE.md) and the [23 October validation](RELEASE_VALIDATION_2026-10-23.md). Build the ZIP with `desktop-app\package.ps1`, then Setup with `desktop-app\build-installer.ps1`. Adaptive is not guaranteed to win every query: the report records retained deep/wide/mixed gains and remaining flat/tiny-folder overhead.
 
 ## Run the desktop app
 
@@ -38,7 +38,7 @@ The index baseline queries the Windows Search database through a PowerShell host
 - RAFS desktop interface, comparison demonstration, and project documentation: **Haris K / Haris757518**.
 - Reused-engine provenance and original author credit: see [AUTHORS.md](AUTHORS.md) and [LICENSE](LICENSE).
 - Original baseline commit: `e74d9d5b72662a23f7ae8a0dde527be3d2517365`.
-- Original MIT LICENSE, author credits, Rust package names, and full Git history are retained.
+- Original MIT copyright and author credits have been restored after an earlier attribution edit; full Git history is retained.
 - `master` preserves the original baseline; `rafs-development` contains the RAFS additions.
 
 The original documentation is retained in [UPSTREAM_README.md](UPSTREAM_README.md). See [BASELINE_NOTES.md](BASELINE_NOTES.md) for baseline inspection and [desktop-app/README.md](desktop-app/README.md) for app instructions.

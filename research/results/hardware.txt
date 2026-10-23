@@ -1,0 +1,9 @@
+Processor: Intel Core i7-13650HX, 14 physical cores, 20 logical processors
+Physical memory bytes: 25463480320
+OS: Windows 11 Home Single Language, 10.0.26300
+Input storage: local D: paths; hardware/storage cache not characterized
+Deep: 25 directories including root, depth 24
+Wide: 2001 directories including root, depth 1
+Mixed: 651 directories including root, depth 8
+Flat: 1 directory, depth 0
+No user name, machine name, matched academic paths or document contents are included.

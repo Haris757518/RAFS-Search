@@ -1,0 +1,118 @@
+{
+  "invocations": 923,
+  "measured": 710,
+  "warmups": 213,
+  "correct": true,
+  "datasets": 9,
+  "comparisons": [
+    {
+      "Dataset": "Deep-20000",
+      "BestFixed": "Fixed / 2 threads",
+      "BestFixedMs": 76.63305,
+      "HybridMs": 69.41135,
+      "Ratio": 0.9057625919887047,
+      "Low95": 0.8641126636939181,
+      "High95": 0.9297254987919088,
+      "LegacyMs": 68.99275,
+      "HybridVsLegacy": 1.0060673041732646,
+      "Strategy": "Adaptive DFS/BFS"
+    },
+    {
+      "Dataset": "Wide-20000",
+      "BestFixed": "Fixed / 2 threads",
+      "BestFixedMs": 139.5177,
+      "HybridMs": 82.97395,
+      "Ratio": 0.5947198814200636,
+      "Low95": 0.552092761957518,
+      "High95": 0.6481436002929675,
+      "LegacyMs": 82.86699999999999,
+      "HybridVsLegacy": 1.0012906223225169,
+      "Strategy": "Adaptive DFS/BFS"
+    },
+    {
+      "Dataset": "Mixed-20000",
+      "BestFixed": "Fixed / 2 threads",
+      "BestFixedMs": 90.38900000000001,
+      "HybridMs": 52.9746,
+      "Ratio": 0.5860735266459414,
+      "Low95": 0.5661236177576344,
+      "High95": 0.7298358517772291,
+      "LegacyMs": 52.82875,
+      "HybridVsLegacy": 1.0027608073255567,
+      "Strategy": "Adaptive DFS/BFS"
+    },
+    {
+      "Dataset": "Flat-20000",
+      "BestFixed": "Fixed / 2 threads",
+      "BestFixedMs": 68.81835000000001,
+      "HybridMs": 67.78245000000001,
+      "Ratio": 0.9849473287284569,
+      "Low95": 0.9400533046646492,
+      "High95": 1.0487704224236705,
+      "LegacyMs": 61.7271,
+      "HybridVsLegacy": 1.098098728111316,
+      "Strategy": "WalkDir + Rayon"
+    },
+    {
+      "Dataset": "Flat-holdout-12000",
+      "BestFixed": "Fixed / 2 threads",
+      "BestFixedMs": 52.150099999999995,
+      "HybridMs": 56.01745,
+      "Ratio": 1.0741580553057426,
+      "Low95": 1.0082592731162823,
+      "High95": 1.1993255483128342,
+      "LegacyMs": 52.14195,
+      "HybridVsLegacy": 1.0743259506021543,
+      "Strategy": "WalkDir + Rayon"
+    },
+    {
+      "Dataset": "Flat-content-128",
+      "BestFixed": "Fixed / 8 threads",
+      "BestFixedMs": 36.45115,
+      "HybridMs": 44.09575,
+      "Ratio": 1.209721778325238,
+      "Low95": 1.0784179633284041,
+      "High95": 1.3521392832331003,
+      "LegacyMs": 51.12605,
+      "HybridVsLegacy": 0.8624908437088334,
+      "Strategy": "WalkDir + Rayon"
+    },
+    {
+      "Dataset": "Real-Rust-source",
+      "BestFixed": "Fixed / 1 threads",
+      "BestFixedMs": 31.9103,
+      "HybridMs": 47.99695,
+      "Ratio": 1.5041209264720168,
+      "Low95": 1.1865144985422593,
+      "High95": 1.7396398290238948,
+      "LegacyMs": 44.5673,
+      "HybridVsLegacy": 1.0769544037893253,
+      "Strategy": "Sequential DFS"
+    },
+    {
+      "Dataset": "Real-desktop-source",
+      "BestFixed": "Sequential DFS",
+      "BestFixedMs": 32.2487,
+      "HybridMs": 38.2582,
+      "Ratio": 1.1863485969977086,
+      "Low95": 0.9493879584136936,
+      "High95": 1.388158222332877,
+      "LegacyMs": 39.0406,
+      "HybridVsLegacy": 0.9799593243956293,
+      "Strategy": "Sequential DFS"
+    },
+    {
+      "Dataset": "Real-academic-copies",
+      "BestFixed": "Fixed / 2 threads",
+      "BestFixedMs": 31.9506,
+      "HybridMs": 42.268299999999996,
+      "Ratio": 1.322926643005139,
+      "Low95": 1.208521710688029,
+      "High95": 1.4634644667307044,
+      "LegacyMs": 41.69005,
+      "HybridVsLegacy": 1.0138702160347612,
+      "Strategy": "Adaptive DFS/BFS"
+    }
+  ],
+  "hybrid_policy_events": 493
+}

@@ -1,0 +1,10 @@
+Dataset,Category,FileCount,ExpectedMatches,PathSetSHA256
+"Deep-20000","development-synthetic","20001","140","6b2f7e5d333d3e5c3a0f1677b49c6ad54b3d869d1755a041b1dc7deb569ce53d"
+"Wide-20000","development-synthetic","20001","140","964dd0846852e176072b3d4ee1c6404a5ae3bebfbef25128ca23863f5b5f0a1c"
+"Mixed-20000","development-synthetic","20001","140","e4a675365b98ad439000c0ad31f902ab7812c159d63267ea6d90389618eb0e44"
+"Flat-20000","development-synthetic","20001","140","f3406aee42ad9a766303eddb0e07a0f062c2aadc81ea59325a520a8281f13763"
+"Flat-holdout-12000","holdout-synthetic","12000","132","62b476217497462e7542ab260ac5833cdaf316a8d6857e382d9218b480b42fa9"
+"Flat-content-128","holdout-synthetic-content","128","128","639f2fc5aa93d274435a37ddc5c7ebbe7392f816ff3559c5cba51f411ca06c69"
+"Real-Rust-source","real-repository","12","12","d8684355d6c595f9b31710ef6d0bde6187a5f3f6f72ab530f0d0afb7a6314b88"
+"Real-desktop-source","real-repository","55","42","cf28305e7ef0577b08905ae2f90cfd336cfee2cbe8da736c11f5c6a302800fab"
+"Real-academic-copies","real-academic-copies","37","21","2aacaddef17d59c23144ac01cabd6446e317070be841860df0e5e1f58febe6b6"
