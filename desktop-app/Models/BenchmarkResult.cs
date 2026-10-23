@@ -5,7 +5,8 @@ using System.Linq;
 internal sealed class RunConfiguration
 {
     public int Method, Threads;
-    public string Name { get { return Method == 2 ? "Recursive DFS / sequential" : "WalkDir + Rayon / " + (Threads == 0 ? "automatic" : Threads.ToString()) + " threads"; } }
+    public bool LegacyAdaptive=false;
+    public string Name { get { return Method == 5 ? (LegacyAdaptive?"RAFS October 22 adaptive / ":"RAFS Hybrid / ") + (Threads==0?"settings cap":Threads.ToString()+" max workers") : Method == 4 ? "Windows Search Index (Explorer backend)" : Method == 3 ? "Traditional PowerShell Search" : Method == 2 ? "Original fsearch Method 2 / sequential" : "Original fsearch Method 1 / " + (Threads == 0 ? "automatic" : Threads.ToString()) + " threads"; } }
 }
 internal sealed class BenchmarkPlan
 {
@@ -19,6 +20,8 @@ internal sealed class BenchmarkMeasurement
 {
     public RunConfiguration Configuration;
     public readonly List<double> Samples = new List<double>();
+    public readonly List<double?> EngineSamples = new List<double?>();
+    public double? EngineMedian {get{var values=EngineSamples.Where(v=>v.HasValue).Select(v=>v.Value).OrderBy(v=>v).ToArray();if(values.Length!=Samples.Count||values.Length==0)return null;int n=values.Length;return n%2==1?values[n/2]:(values[n/2-1]+values[n/2])/2;}}
     public double Median {
         get { var sorted = Samples.OrderBy(x => x).ToArray(); int n = sorted.Length; return n == 0 ? 0 : n % 2 == 1 ? sorted[n / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2; }
     }
@@ -32,6 +35,8 @@ internal sealed class BenchmarkResult
     public SearchReport Matches;
     public readonly List<BenchmarkMeasurement> Measurements = new List<BenchmarkMeasurement>();
     public DateTime CompletedAt;
+    public string OperatingSystem = Environment.OSVersion.ToString();
+    public int LogicalProcessors = Environment.ProcessorCount;
 }
 internal sealed class RunProgress
 {

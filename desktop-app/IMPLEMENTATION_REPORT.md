@@ -2,7 +2,7 @@
 
 Project: D:\OS_Project\RAFS-Search
 Branch: rafs-development
-Original repository: https://github.com/Haris757518/fsearch
+Original repository: https://github.com/cumulus13/fsearch
 Derivative application: Haris K
 Original Rust engine: Haris K / Haris757518
 
@@ -43,7 +43,7 @@ Cargo.toml, LICENSE and the complete Rust source tree match upstream commit e74d
 - Full test results: target/desktop-verification/checks.txt. Final GUI verification: exit code 0, 91 passing checks (including three Windows shell launch checks).
 - Windows shell-action checks confirm requests to open the license in Notepad and reveal/open project folders are accepted. Automated checks do not confirm Explorer's final selected item or manually inspect Notepad rendering. Direct UI automation encountered inconsistent focus/geometry and was stopped after recovery failed; no full click-through verification is claimed.
 
-## Known limitations
+## Historical milestone limitations (superseded by PROJECT_STATUS.md on 12 October 2026)
 
 No Adaptive controller, DFS/BFS switching, workload profiling, adaptive workers, real scanned counters, throughput, queue pressure, CPU/memory/disk monitoring, dark theme, dataset generation or duplicate-search GUI. Method 2 remains sequential. Configured thread counts are not active-worker telemetry. Small workloads are dominated by launch/cache effects; no guarantee of a speedup and no Windows Explorer comparison are made. Final results arrive only after process exit. CLI engine time may round down to zero milliseconds. Numbered path-output parsing and upstream matching/permission behavior remain. Manual multi-monitor/DPI tests and a final physical button/Explorer inspection remain advisable.
 

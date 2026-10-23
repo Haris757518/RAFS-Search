@@ -13,9 +13,10 @@ internal sealed class ThroughputView : Panel
         Dock = DockStyle.Fill; BackColor = Theme.Surface;
         chart.Dock = DockStyle.Fill; chart.Visible = false;
         var area = new ChartArea("Throughput"); area.AxisX.Title = "Seconds"; area.AxisY.Title = "Files / second"; area.AxisY.Minimum = 0; chart.ChartAreas.Add(area);
+        chart.BackColor=area.BackColor=Theme.Surface;area.AxisX.LabelStyle.ForeColor=area.AxisY.LabelStyle.ForeColor=area.AxisX.TitleForeColor=area.AxisY.TitleForeColor=Theme.Text;
         chart.Series.Add(new Series("Files per second") { ChartType = SeriesChartType.Line, Color = Theme.Accent, BorderWidth = 2 });
         Controls.Add(chart);
-        empty.Text = "Runtime throughput telemetry will be available after RAFS instrumentation."; empty.Dock = DockStyle.Fill; empty.TextAlign = ContentAlignment.MiddleCenter; empty.Padding = new Padding(14);
+        empty.Text = "Run RAFS Adaptive to plot measured files per second."; empty.Dock = DockStyle.Fill; empty.TextAlign = ContentAlignment.MiddleCenter; empty.Padding = new Padding(14);
         empty.ForeColor = Theme.Muted; empty.BackColor = Theme.Surface; Controls.Add(empty); empty.BringToFront();
     }
     public void Reset() { start = null; chart.Series[0].Points.Clear(); empty.Visible = true; chart.Visible = false; }
@@ -33,15 +34,16 @@ internal sealed class DecisionTimeline : Panel
     {
         Dock = DockStyle.Fill; BackColor = Theme.Surface;
         list.Dock = DockStyle.Fill; list.Visible = false; list.View = View.Details; list.FullRowSelect = true;
+        list.BackColor=Theme.Surface;list.ForeColor=Theme.Text;
         list.Columns.Add("Time", 90); list.Columns.Add("Event", 160); list.Columns.Add("Change", 120); list.Columns.Add("Reason", 360); list.Columns.Add("Measured value", 130);
         Controls.Add(list);
-        empty.Text = "Adaptive controller not enabled yet."; empty.Dock = DockStyle.Fill; empty.TextAlign = ContentAlignment.MiddleCenter; empty.Padding = new Padding(14);
+        empty.Text = "Adaptive decisions appear when the workload changes scheduling or workers."; empty.Dock = DockStyle.Fill; empty.TextAlign = ContentAlignment.MiddleCenter; empty.Padding = new Padding(14);
         empty.ForeColor = Theme.Muted; Controls.Add(empty); empty.BringToFront();
     }
     public void Present(IList<AdaptiveDecision> decisions) {
         empty.Visible = decisions.Count == 0; list.Visible = decisions.Count > 0;
-        if (decisions.Count == list.Items.Count) return;
+        if(decisions.Count==list.Items.Count && (decisions.Count==0 || list.Items[0].Tag==decisions[0]))return;
         list.Items.Clear(); empty.Visible = decisions.Count == 0;
-        foreach (var decision in decisions) list.Items.Add(new ListViewItem(new[] { decision.Timestamp.ToString("HH:mm:ss.fff"), decision.EventType, decision.OldValue + " → " + decision.NewValue, decision.Reason, decision.MeasuredValue.HasValue ? decision.MeasuredValue.Value.ToString("0.00") : "--" }));
+        foreach (var decision in decisions) list.Items.Add(new ListViewItem(new[] { decision.Timestamp.ToString("HH:mm:ss.fff"), decision.EventType, decision.OldValue + " → " + decision.NewValue, decision.Reason, decision.MeasuredValue.HasValue ? decision.MeasuredValue.Value.ToString("0.00") : "--" }){Tag=decision});
     }
 }

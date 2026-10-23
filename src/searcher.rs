@@ -1,5 +1,5 @@
 // File: src\searcher.rs
-// Author: Haris K <242903453+Haris757518@users.noreply.github.com>
+// Original author: Hadi Cahyadi <cumulus13@gmail.com>
 // Date: 2026-05-11
 // Description:
 // License: MIT
@@ -25,6 +25,12 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use walkdir::WalkDir;
+
+pub(crate) fn warn_io(path: &Path, error: &impl std::fmt::Display) {
+    if std::env::var_os("RAFS_REPORT_WARNINGS").is_some() {
+        eprintln!("RAFS|warning|Skipped {}: {}", path.display(), error);
+    }
+}
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -256,7 +262,7 @@ pub fn parse_patterns(raw: &str, case_insensitive: bool) -> Vec<String> {
         .collect()
 }
 
-fn matches_include(name: &str, patterns: &[String], ci: bool) -> bool {
+pub(crate) fn matches_include(name: &str, patterns: &[String], ci: bool) -> bool {
     if patterns.is_empty() {
         return true;
     }
@@ -272,13 +278,13 @@ fn matches_include(name: &str, patterns: &[String], ci: bool) -> bool {
     })
 }
 
-fn is_excluded_dir(name: &str, excludes: &[String]) -> bool {
+pub(crate) fn is_excluded_dir(name: &str, excludes: &[String]) -> bool {
     excludes
         .iter()
         .any(|ex| Pattern::new(ex).map(|p| p.matches(name)).unwrap_or(false) || ex == name)
 }
 
-fn name_matches(entry_name: &str, pattern: &str, ci: bool) -> bool {
+pub(crate) fn name_matches(entry_name: &str, pattern: &str, ci: bool) -> bool {
     let (name, pat) = if ci {
         (entry_name.to_lowercase(), pattern.to_lowercase())
     } else {
@@ -295,7 +301,7 @@ fn name_matches(entry_name: &str, pattern: &str, ci: bool) -> bool {
 
 // ── Content search ────────────────────────────────────────────────────────────
 
-fn search_in_file(
+pub(crate) fn search_in_file(
     path: &Path,
     pattern: &str,
     ci: bool,
@@ -304,84 +310,167 @@ fn search_in_file(
     context_before: usize,
     context_after: usize,
 ) -> Vec<LineMatch> {
-    if is_binary(path, check_bytes) {
+    search_content(
+        path,
+        pattern,
+        ci,
+        (max_line, check_bytes),
+        (context_before, context_after),
+        None,
+    )
+}
+
+pub(crate) fn search_in_file_cancellable(
+    path: &Path,
+    opts: &SearchOptions,
+    interrupted: &AtomicBool,
+) -> Vec<LineMatch> {
+    search_content(
+        path,
+        &opts.pattern,
+        opts.case_insensitive,
+        (opts.max_line_length, opts.binary_check_bytes),
+        (opts.context_before, opts.context_after),
+        Some(interrupted),
+    )
+}
+
+// Keep only the current bounded line and the requested preceding context.
+// Matching output still scales with the number of actual matching lines.
+fn search_content(
+    path: &Path,
+    pattern: &str,
+    ci: bool,
+    limits: (usize, usize),
+    context: (usize, usize),
+    interrupted: Option<&AtomicBool>,
+) -> Vec<LineMatch> {
+    if interrupted.is_some_and(|flag| flag.load(Ordering::Relaxed)) || is_binary(path, limits.1) {
         return vec![];
     }
     let file = match fs::File::open(path) {
-        Ok(f) => f,
-        Err(_) => return vec![],
+        Ok(file) => file,
+        Err(error) => {
+            warn_io(path, &error);
+            return vec![];
+        }
     };
-    let pat = if ci {
+    let mut reader = BufReader::new(file);
+    let pattern = if ci {
         pattern.to_lowercase()
     } else {
-        pattern.to_string()
+        pattern.to_owned()
     };
-
-    // Read every line up front so context windows (-A/-B/--context) can
-    // reach backward and forward from a match. Content search already
-    // excludes binaries and very-long lines, so files reaching here are
-    // expected to be reasonably sized text files.
-    let all_lines: Vec<String> = BufReader::new(file).lines().map_while(Result::ok).collect();
-
-    let match_indices: Vec<usize> = all_lines
-        .iter()
-        .enumerate()
-        .filter_map(|(i, line)| {
-            if line.len() > max_line {
-                return None;
+    let mut prior = std::collections::VecDeque::new();
+    let mut output = Vec::new();
+    let mut number: usize = 0;
+    let mut last_emitted = 0;
+    let mut remaining = 0;
+    loop {
+        let line = match bounded_line(&mut reader, limits.0, interrupted) {
+            Ok(Some(line)) => line,
+            Ok(None) => break,
+            Err(error) => {
+                if error.kind() != std::io::ErrorKind::Interrupted {
+                    warn_io(path, &error);
+                }
+                break;
             }
-            let cmp = if ci {
-                line.to_lowercase()
+        };
+        number += 1;
+        let matched = line.as_ref().is_some_and(|text| {
+            if ci {
+                text.to_lowercase().contains(&pattern)
             } else {
-                line.clone()
-            };
-            if cmp.contains(&pat) {
-                Some(i)
-            } else {
-                None
+                text.contains(&pattern)
             }
-        })
-        .collect();
-
-    if match_indices.is_empty() {
-        return vec![];
-    }
-
-    if context_before == 0 && context_after == 0 {
-        return match_indices
-            .into_iter()
-            .map(|i| (i + 1, all_lines[i].clone(), true))
-            .collect();
-    }
-
-    // Merge each match's [i-before, i+after] window into a set of
-    // non-overlapping (possibly touching) ranges, same as grep's `-A`/`-B`
-    // behaviour when matches are close enough that their context overlaps.
-    let last_idx = all_lines.len().saturating_sub(1);
-    let mut ranges: Vec<(usize, usize)> = Vec::new();
-    for &i in &match_indices {
-        let start = i.saturating_sub(context_before);
-        let end = (i + context_after).min(last_idx);
-        match ranges.last_mut() {
-            Some(last) if start <= last.1 + 1 => {
-                last.1 = last.1.max(end);
+        });
+        if matched {
+            for (previous, text) in &prior {
+                if *previous > last_emitted {
+                    output.push((*previous, String::clone(text), false));
+                    last_emitted = *previous;
+                }
             }
-            _ => ranges.push((start, end)),
+        }
+        if let Some(text) = line {
+            if matched || remaining > 0 {
+                output.push((number, text.clone(), matched));
+                last_emitted = number;
+            }
+            if context.0 > 0 {
+                prior.push_back((number, text));
+            }
+        }
+        while prior
+            .front()
+            .is_some_and(|(previous, _)| number.saturating_sub(*previous) >= context.0)
+        {
+            prior.pop_front();
+        }
+        if matched {
+            remaining = context.1;
+        } else {
+            remaining = remaining.saturating_sub(1);
         }
     }
+    output
+}
 
-    let match_set: HashSet<usize> = match_indices.into_iter().collect();
-    ranges
-        .into_iter()
-        .flat_map(|(start, end)| {
-            (start..=end).map(|i| (i + 1, all_lines[i].clone(), match_set.contains(&i)))
-        })
-        .collect()
+fn bounded_line(
+    reader: &mut impl BufRead,
+    limit: usize,
+    interrupted: Option<&AtomicBool>,
+) -> std::io::Result<Option<Option<String>>> {
+    let mut line = Vec::new();
+    let mut oversized = false;
+    let mut read = false;
+    loop {
+        if interrupted.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
+            return Err(std::io::Error::from(std::io::ErrorKind::Interrupted));
+        }
+        let buffer = reader.fill_buf()?;
+        if buffer.is_empty() {
+            if !read {
+                return Ok(None);
+            }
+            break;
+        }
+        read = true;
+        let newline = buffer.iter().position(|b| *b == b'\n');
+        let take = newline.map_or(buffer.len(), |n| n + 1);
+        if !oversized {
+            if line.len().saturating_add(take) <= limit.saturating_add(2) {
+                line.extend_from_slice(&buffer[..take]);
+            } else {
+                oversized = true;
+                line.clear();
+            }
+        }
+        reader.consume(take);
+        if newline.is_some() {
+            break;
+        }
+    }
+    if oversized {
+        return Ok(Some(None));
+    }
+    if line.last() == Some(&b'\n') {
+        line.pop();
+        if line.last() == Some(&b'\r') {
+            line.pop();
+        }
+    }
+    if line.len() > limit {
+        return Ok(Some(None));
+    }
+    String::from_utf8(line)
+        .map(|s| Some(Some(s)))
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::InvalidData, error))
 }
 
 // ── Validation ────────────────────────────────────────────────────────────────
-
-fn validate_dirs(dirs: &[PathBuf]) -> FsearchResult<()> {
+pub(crate) fn validate_dirs(dirs: &[PathBuf]) -> FsearchResult<()> {
     if dirs.is_empty() {
         return Err(FsearchError::DirectoryNotFound(
             "(no directories specified)".into(),
@@ -400,6 +489,21 @@ fn validate_dirs(dirs: &[PathBuf]) -> FsearchResult<()> {
 
 // ── Method 1 — walkdir + rayon (parallel, multi-root) ────────────────────────
 
+/// Internal optional instrumentation; original public baselines pay no atomic-counter cost.
+pub(crate) trait SearchObserver: Sync {
+    fn directory(&self, depth: u32);
+    fn file_begin(&self, depth: u32);
+    fn file_end(&self);
+}
+struct FileActivity<'a>(Option<&'a dyn SearchObserver>);
+impl Drop for FileActivity<'_> {
+    fn drop(&mut self) {
+        if let Some(observer) = self.0 {
+            observer.file_end();
+        }
+    }
+}
+
 /// Search using `walkdir` + `rayon` across **one or more directories**.
 ///
 /// All roots are walked in parallel; results are merged and de-duplicated
@@ -407,6 +511,13 @@ fn validate_dirs(dirs: &[PathBuf]) -> FsearchResult<()> {
 pub fn fast_find(
     opts: &SearchOptions,
     interrupted: Arc<AtomicBool>,
+) -> FsearchResult<Vec<SearchMatch>> {
+    fast_find_observed(opts, interrupted, None)
+}
+pub(crate) fn fast_find_observed(
+    opts: &SearchOptions,
+    interrupted: Arc<AtomicBool>,
+    observer: Option<&dyn SearchObserver>,
 ) -> FsearchResult<Vec<SearchMatch>> {
     validate_dirs(&opts.base_dirs)?;
 
@@ -418,6 +529,9 @@ pub fn fast_find(
         .base_dirs
         .par_iter()
         .flat_map(|base| {
+            if let Some(observer) = observer {
+                observer.directory(0);
+            }
             if interrupted.load(Ordering::Relaxed) {
                 return vec![];
             }
@@ -434,7 +548,13 @@ pub fn fast_find(
                     }
                     true
                 })
-                .filter_map(|e| e.ok())
+                .filter_map(|e| match e {
+                    Ok(entry) => Some(entry),
+                    Err(error) => {
+                        warn_io(base, &error);
+                        None
+                    }
+                })
                 .filter(|e| e.depth() > 0)
                 .collect();
 
@@ -446,6 +566,19 @@ pub fn fast_find(
                     }
 
                     let is_dir = entry.file_type().is_dir();
+                    if entry.file_type().is_symlink() || (!is_dir && !entry.file_type().is_file()) {
+                        return None;
+                    }
+                    if let Some(observer) = observer {
+                        if is_dir {
+                            if entry.depth() <= opts.max_depth as usize {
+                                observer.directory(entry.depth() as u32);
+                            }
+                        } else {
+                            observer.file_begin(entry.depth().saturating_sub(1) as u32);
+                        }
+                    }
+                    let _activity = FileActivity(if is_dir { None } else { observer });
                     let name = entry.file_name().to_string_lossy().to_string();
                     let path = entry.path().to_path_buf();
 
@@ -467,15 +600,19 @@ pub fn fast_find(
                         if is_dir {
                             return None;
                         }
-                        let lines = search_in_file(
-                            &path,
-                            &opts.pattern,
-                            opts.case_insensitive,
-                            opts.max_line_length,
-                            opts.binary_check_bytes,
-                            opts.context_before,
-                            opts.context_after,
-                        );
+                        let lines = if observer.is_some() {
+                            search_in_file_cancellable(&path, opts, &interrupted)
+                        } else {
+                            search_in_file(
+                                &path,
+                                &opts.pattern,
+                                opts.case_insensitive,
+                                opts.max_line_length,
+                                opts.binary_check_bytes,
+                                opts.context_before,
+                                opts.context_after,
+                            )
+                        };
                         if lines.is_empty() {
                             None
                         } else {
@@ -512,6 +649,13 @@ pub fn recursive_find(
     opts: &SearchOptions,
     interrupted: Arc<AtomicBool>,
 ) -> FsearchResult<Vec<SearchMatch>> {
+    recursive_find_observed(opts, interrupted, None)
+}
+pub(crate) fn recursive_find_observed(
+    opts: &SearchOptions,
+    interrupted: Arc<AtomicBool>,
+    observer: Option<&dyn SearchObserver>,
+) -> FsearchResult<Vec<SearchMatch>> {
     validate_dirs(&opts.base_dirs)?;
 
     let mut seen: HashSet<PathBuf> = HashSet::new();
@@ -521,7 +665,15 @@ pub fn recursive_find(
         if interrupted.load(Ordering::Relaxed) {
             break;
         }
-        walk_dir(base, opts, 0, &mut matches, &mut seen, &interrupted);
+        walk_dir(
+            base,
+            opts,
+            0,
+            &mut matches,
+            &mut seen,
+            &interrupted,
+            observer,
+        );
     }
 
     matches.sort_unstable_by(|a, b| a.path().cmp(b.path()));
@@ -535,16 +687,30 @@ fn walk_dir(
     matches: &mut Vec<SearchMatch>,
     seen: &mut HashSet<PathBuf>,
     interrupted: &AtomicBool,
+    observer: Option<&dyn SearchObserver>,
 ) {
     if depth > opts.max_depth || interrupted.load(Ordering::Relaxed) {
         return;
     }
+    if let Some(observer) = observer {
+        observer.directory(depth);
+    }
     let entries = match fs::read_dir(dir) {
         Ok(e) => e,
-        Err(_) => return,
+        Err(error) => {
+            warn_io(dir, &error);
+            return;
+        }
     };
 
-    for entry in entries.flatten() {
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(error) => {
+                warn_io(dir, &error);
+                continue;
+            }
+        };
         if interrupted.load(Ordering::Relaxed) {
             break;
         }
@@ -552,7 +718,10 @@ fn walk_dir(
         let path = entry.path();
         let file_type = match entry.file_type() {
             Ok(ft) => ft,
-            Err(_) => continue,
+            Err(error) => {
+                warn_io(&path, &error);
+                continue;
+            }
         };
         let name = entry.file_name().to_string_lossy().to_string();
 
@@ -571,21 +740,29 @@ fn walk_dir(
             {
                 matches.push(SearchMatch::Path(path.clone()));
             }
-            walk_dir(&path, opts, depth + 1, matches, seen, interrupted);
+            walk_dir(&path, opts, depth + 1, matches, seen, interrupted, observer);
         } else if file_type.is_file() {
+            if let Some(observer) = observer {
+                observer.file_begin(depth);
+            }
+            let _activity = FileActivity(observer);
             if !matches_include(&name, &opts.include_patterns, opts.case_insensitive) {
                 continue;
             }
             if opts.search_in_files {
-                let lines = search_in_file(
-                    &path,
-                    &opts.pattern,
-                    opts.case_insensitive,
-                    opts.max_line_length,
-                    opts.binary_check_bytes,
-                    opts.context_before,
-                    opts.context_after,
-                );
+                let lines = if observer.is_some() {
+                    search_in_file_cancellable(&path, opts, interrupted)
+                } else {
+                    search_in_file(
+                        &path,
+                        &opts.pattern,
+                        opts.case_insensitive,
+                        opts.max_line_length,
+                        opts.binary_check_bytes,
+                        opts.context_before,
+                        opts.context_after,
+                    )
+                };
                 if !lines.is_empty() {
                     matches.push(SearchMatch::Content { path, lines });
                 }
@@ -609,6 +786,28 @@ fn cap(mut v: Vec<SearchMatch>, limit: usize) -> Vec<SearchMatch> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn bounded_content_handles_oversized_lines_crlf_and_eof() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("long.txt");
+        std::fs::write(
+            &path,
+            format!("{}\r\nneedle\r\nlast needle", "a".repeat(2 * 1024 * 1024)),
+        )
+        .unwrap();
+        let lines = super::search_in_file(&path, "needle", false, 64, 1024, 1, 1);
+        assert_eq!(lines.iter().map(|m| m.0).collect::<Vec<_>>(), vec![2, 3]);
+        assert!(lines.iter().all(|m| m.2));
+    }
+    #[test]
+    fn content_cancellation_interrupts_a_single_file() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("x.txt");
+        std::fs::write(&path, "needle").unwrap();
+        let opts = super::SearchOptions::builder("needle").build();
+        let cancelled = std::sync::atomic::AtomicBool::new(true);
+        assert!(super::search_in_file_cancellable(&path, &opts, &cancelled).is_empty());
+    }
     use super::*;
     use std::io::Write;
     use tempfile::TempDir;

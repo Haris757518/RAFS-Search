@@ -1,0 +1,1 @@
+Separate Windows Search Index observation: dataset=Real-academic-copies, succeeded=True, indexed matches=0, live matches=21. Prebuilt index and live traversal are not ranked together. 

@@ -1,0 +1,8 @@
+Protocol: 3 warmups + 10 measured rounds per configuration; rotated order; warm filesystem cache.
+OS: Microsoft Windows NT 10.0.26300.0
+Logical CPUs: 20
+Framework: 4.0.30319.42000
+Source revision: f26d83de2a6d85c393a1bd481643dda27e75e513
+Engine SHA256: a47be4010d3d0fe1e1a72f50a38893a18ecc3cde1d59522b834d4ce4367dfb58
+Resource sampling: OS cumulative CPU time; OS peak working set polled every 10 ms (sampled lower bound). Sampling cost retained in totals and recorded separately.
+PowerShell excluded from content search; index queries recorded separately, not ranked against live traversal.

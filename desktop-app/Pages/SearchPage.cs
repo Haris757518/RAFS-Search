@@ -30,6 +30,7 @@ internal sealed class SearchPage : AppPage
         var files = new TabPage("Results"); var logs = new TabPage("Raw output / content matches");
         var list = Theme.Stack(); Theme.Row(list, Grid, true); Theme.Row(list, Theme.Flow(reveal, export), false); files.Controls.Add(list);
         output.Dock = DockStyle.Fill; output.Multiline = true; output.ReadOnly = true; output.ScrollBars = ScrollBars.Both; output.WordWrap = false; output.Font = Theme.Mono(); output.BackColor = Theme.Surface;
+        output.ForeColor=Theme.Text;
         logs.Controls.Add(output); tabs.TabPages.Add(files); tabs.TabPages.Add(logs); Theme.Row(Body, tabs, true);
         Theme.Row(Body, Theme.Flow(status, progress), false);
         start.Click += delegate { Start(); }; cancel.Click += delegate { session.Cancel(); };

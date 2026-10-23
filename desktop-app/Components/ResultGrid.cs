@@ -10,6 +10,7 @@ internal sealed class ResultGrid : DataGridView
     public string SelectedPath { get { return CurrentCell == null || CurrentCell.RowIndex >= paths.Count ? null : paths[CurrentCell.RowIndex]; } }
     public ResultGrid()
     {
+        AccessibleName="Search result files";AccessibleDescription="Use arrow keys to select a file. Show in Folder opens its location.";
         Dock = DockStyle.Fill; ReadOnly = true; VirtualMode = true; AllowUserToAddRows = false; AllowUserToDeleteRows = false; RowHeadersVisible = false;
         SelectionMode = DataGridViewSelectionMode.FullRowSelect; MultiSelect = false; BackgroundColor = Theme.Surface; BorderStyle = BorderStyle.None;
         AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill; EnableHeadersVisualStyles = false;

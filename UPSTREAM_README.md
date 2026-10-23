@@ -4,7 +4,7 @@
 [![docs.rs](https://docs.rs/fast-search/badge.svg)](https://docs.rs/fast-search)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/rust-1.75%2B-orange.svg)](https://www.rust-lang.org)
-[![CI](https://github.com/Haris757518/fsearch/actions/workflows/ci.yml/badge.svg)](https://github.com/Haris757518/fsearch/actions)
+[![CI](https://github.com/cumulus13/fsearch/actions/workflows/ci.yml/badge.svg)](https://github.com/cumulus13/fsearch/actions)
 
 A blazingly fast, cross-platform **library and CLI tool** for:
 - 🔍 Searching files by name (glob) or content (in-file grep)
@@ -51,7 +51,7 @@ fast-search = "1.1"
 
 ### Pre-built binaries
 
-Download from [GitHub Releases](https://github.com/Haris757518/fsearch/releases):
+Download from [GitHub Releases](https://github.com/cumulus13/fsearch/releases):
 
 | Platform | File |
 |----------|------|
@@ -67,7 +67,7 @@ Each archive contains both `fsearch` and `fs` binaries.
 ### From source
 
 ```bash
-git clone https://github.com/Haris757518/fsearch
+git clone https://github.com/cumulus13/fsearch
 cd fsearch
 cargo build --release
 # binaries → ./target/release/fsearch and ./target/release/fs
@@ -384,8 +384,8 @@ MIT — see [LICENSE](LICENSE)
 
 ## 👤 Author
 
-**Haris K** — [242903453+Haris757518@users.noreply.github.com](mailto:242903453+Haris757518@users.noreply.github.com)  
-GitHub: [@Haris757518](https://github.com/Haris757518)
+**Hadi Cahyadi** — [cumulus13@gmail.com](mailto:cumulus13@gmail.com)  
+GitHub: [@cumulus13](https://github.com/cumulus13)
 
-[![Buy Me a Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/Haris757518)
-[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Haris757518)
+[![Buy Me a Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/cumulus13)
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/cumulus13)

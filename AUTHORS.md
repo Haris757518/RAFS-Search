@@ -1,6 +1,6 @@
 # Authors and contributions
 
-- **Haris K ([Haris757518](https://github.com/Haris757518))**: RAFS OS project, Windows desktop demonstration interface, measured comparison graph, and RAFS documentation added on the development branch.
-- **Haris K ([Haris757518](https://github.com/Haris757518))**: original fsearch Rust engine and upstream project. Original copyright, MIT license, source attribution, and Git history are preserved.
+- **Hadi Cahyadi ([cumulus13](https://github.com/cumulus13))**, `cumulus13@gmail.com`: original fsearch Rust engine and upstream project, https://github.com/cumulus13/fsearch. The original 2025 MIT copyright is retained in LICENSE.
+- **Haris K ([Haris757518](https://github.com/Haris757518))**: RAFS adaptive/hybrid schedulers, instrumentation, Windows application, experiments and project documentation. These are extensions to fsearch, not authorship of the upstream engine.
 
-The current RAFS additions do not implement runtime-adaptive traversal or concurrency.
+The repository history is retained. Attribution incorrectly replaced in commit 14c7e6c is restored from its parent; no history is rewritten.

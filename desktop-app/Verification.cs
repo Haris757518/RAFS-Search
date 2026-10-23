@@ -64,14 +64,15 @@ internal static class Verification
             try { Run(new SearchRequest { Folder = Path.Combine(fixture, "missing"), Pattern = "*" }); throw new Exception("Invalid folder accepted"); } catch (ArgumentException) { log.AppendLine("PASS invalid directory validation"); }
             var a = Run(new SearchRequest { Folder = Path.Combine(SearchRunner.Root, "src"), Pattern = "*.rs", Method = 1 });
             var b = Run(new SearchRequest { Folder = Path.Combine(SearchRunner.Root, "src"), Pattern = "*.rs", Method = 2 });
-            Check(a.Succeeded && b.Succeeded && a.Paths.Count == 10 && new HashSet<string>(a.Paths).SetEquals(b.Paths), "real src/*.rs baseline regression: 10 identical files");
+            int sourceCount=Directory.GetFiles(Path.Combine(SearchRunner.Root,"src"),"*.rs").Length;
+            Check(a.Succeeded && b.Succeeded && a.Paths.Count == sourceCount && new HashSet<string>(a.Paths).SetEquals(b.Paths), "real src/*.rs baseline regression: identical files");
             var review = new BenchmarkPlan { Request = new SearchRequest { Folder = Path.Combine(SearchRunner.Root, "src"), Pattern = "*.rs" }, Runs = 2, Warmups = 1 };
             review.Configurations.Add(new RunConfiguration { Method = 2, Threads = 1 }); review.Configurations.Add(new RunConfiguration { Method = 1, Threads = 2 });
             var reviewComparison = new BenchmarkRunner(new BaselineCliBackend()).Run(review, delegate { }, delegate { return false; }, delegate { });
-            Check(reviewComparison.Matches.Paths.Count == 10 && reviewComparison.Measurements.All(m => m.Samples.Count == 2), "Review 1 src/*.rs comparison: both methods / identical 10-file set");
+            Check(reviewComparison.Matches.Paths.Count == sourceCount && reviewComparison.Measurements.All(m => m.Samples.Count == 2), "Review src/*.rs comparison: both methods / identical set");
             review.Lab = true;
             var reviewBenchmark = new BenchmarkRunner(new BaselineCliBackend()).Run(review, delegate { }, delegate { return false; }, delegate { });
-            Check(reviewBenchmark.Matches.Paths.Count == 10 && reviewBenchmark.Measurements.Count == 2, "Review 1 small real src/*.rs benchmark");
+            Check(reviewBenchmark.Matches.Paths.Count == sourceCount && reviewBenchmark.Measurements.Count == 2, "Review small real src/*.rs benchmark");
             var plan = new BenchmarkPlan { Request = new SearchRequest { Folder = fixture, Pattern = "demo_*.txt" }, Runs = 3, Warmups = 1 };
             plan.Configurations.Add(new RunConfiguration { Method = 1, Threads = 1 }); plan.Configurations.Add(new RunConfiguration { Method = 1, Threads = 2 });
             var comparison = new BenchmarkRunner(new BaselineCliBackend()).Run(plan, delegate { }, delegate { return false; }, delegate { });
@@ -89,7 +90,7 @@ internal static class Verification
             Check(benchmark.Measurements.Count == 6 && benchmark.Measurements.All(m => m.Samples.Count == 2) && benchmark.Matches.Paths.Count == 2, "real six-configuration benchmark matrix");
             ReportExporter.Results(Path.Combine(artifacts, "results.csv"), a);
             ReportExporter.Benchmark(Path.Combine(artifacts, "benchmark.csv"), benchmark);
-            Check(File.ReadAllLines(Path.Combine(artifacts, "results.csv")).Length == 11 && File.ReadAllLines(Path.Combine(artifacts, "benchmark.csv")).Length == 13, "CSV results and measured timing sample export");
+            Check(File.ReadAllLines(Path.Combine(artifacts, "results.csv")).Length == sourceCount+1 && File.ReadAllLines(Path.Combine(artifacts, "benchmark.csv")).Length == 13, "CSV results and measured timing sample export");
             var settings = new SettingsService(Path.Combine(artifacts, "settings-test.xml"));
             settings.Settings.DefaultDepth = 8; settings.Settings.MaximumWorkers = 12; settings.Save();
             var restored = new SettingsService(settings.FilePath); Check(restored.Settings.DefaultDepth == 8 && restored.Settings.MaximumWorkers == 12, "persisted defaults and future worker limit");
@@ -100,7 +101,7 @@ internal static class Verification
                 Check(app.Session.State != SessionState.Cancelled, "navigation does not cancel or duplicate active search");
                 Wait(app.Session); app.ShowPage("Search");
                 Check(app.Session.State == SessionState.Completed && app.Search.Grid.MatchCount == 2 && app.Search.Options.Query.Text == plan.Request.Pattern, "Search results and inputs retained across page navigation");
-                Check(app.Session.Telemetry == null && app.Session.Decisions.Count == 0 && !app.Session.Capabilities.Adaptive, "no fabricated adaptive metrics or events");
+                Check(app.Session.Telemetry == null && app.Session.Decisions.Count == 0 && app.Session.Capabilities.Adaptive, "baseline has no fabricated adaptive metrics; adaptive capability available");
                 app.Session.StartSearch(plan.Request); app.Session.Cancel(); Wait(app.Session); Check(app.Session.State == SessionState.Cancelled, "real search cancellation");
                 app.Session.StartBenchmark(plan); app.ShowPage("Live Monitor"); Wait(app.Session); Check(app.Session.Comparison != null, "session comparison in background");
                 app.Session.StartBenchmark(lab); app.Session.Cancel(); Wait(app.Session); Check(app.Session.State == SessionState.Cancelled && app.Session.LabResult == null, "benchmark cancellation discards partial results");
@@ -117,13 +118,14 @@ internal static class Verification
                 app.Close();
             }
             Check(File.Exists(Path.Combine(SearchRunner.Root, "LICENSE")), "View License target exists");
-            Check(!Directory.GetDirectories(Path.Combine(SearchRunner.Root, "target", "desktop-runs")).Any(), "isolated per-run configurations cleaned after completion and cancellation");
+            Check(!Directory.GetDirectories(AppPaths.Runs).Any(), "isolated per-run configurations cleaned after completion and cancellation");
             if (Environment.GetCommandLineArgs().Contains("--shell-actions")) {
                 DesktopActions.ViewLicense(); Check(true, "Windows accepted View License in Notepad");
                 DesktopActions.Reveal(Path.Combine(SearchRunner.Root, "src", "searcher.rs")); Check(true, "Windows accepted Show in Folder for src/searcher.rs");
                 DesktopActions.OpenFolder(); Check(true, "Windows accepted Open Project Folder");
             }
             log.AppendLine("DPI configuration: PerMonitorV2 manifest/config and .NET Framework 4.8 target. Physical 125%/150% monitor switching requires a manual Windows display test.");
+            FeatureVerification.Run(Path.Combine(artifacts,"features"),Environment.GetCommandLineArgs().Contains("--large-workloads"));
             File.WriteAllText(Path.Combine(artifacts, "checks.txt"), log.ToString()); return 0;
         } catch (Exception error) { log.AppendLine("FAIL " + error); File.WriteAllText(Path.Combine(artifacts, "checks.txt"), log.ToString()); return 1; }
     }
